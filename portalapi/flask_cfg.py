@@ -17,6 +17,9 @@ class DevConfig(BaseConfig):
     database = "api_internal_dev"
   )
 
+  # Name passed along to Postgres for application_name
+  DB_APP_NAME = "portalapi-flaskdbg"
+
   # Flask settings
   PROPAGATE_EXCEPTIONS = True
 
@@ -41,6 +44,9 @@ class ProdConfig(BaseConfig):
     password = "portaldev_user",
     database = "api_internal_dev"
   )
+
+  # Name passed along to Postgres for application_name
+  DB_APP_NAME = "portalapi-flask"
 
   # Flask settings
   PROPAGATE_EXCEPTIONS = True

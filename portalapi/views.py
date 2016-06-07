@@ -42,7 +42,7 @@ def before_request():
   g.db = db
 
 @app.teardown_appcontext
-def close_db():
+def close_db(*args):
   db = getattr(g,"db",None)
   if db is not None:
     db.close()
@@ -103,10 +103,6 @@ def std_response(db_table,db_cols,field_to_cols=None):
 
   sql, params = sql_compiler.to_sql(filter_str,db_table,db_cols,fields,sort_fields,field_to_cols)
 
-  print sql
-  print params
-  print ""
-
   # text() is sqlalchemy helper object when specifying SQL as plain text string
   # allows for bind parameters to be used
   cur = g.db.execute(text(sql),params)
@@ -121,8 +117,6 @@ def std_response(db_table,db_cols,field_to_cols=None):
     cols_to_field = {v: k for k, v in field_to_cols.iteritems()}
   else:
     cols_to_field = {v: v for v in db_cols}
-
-  print cols_to_field
 
   if format_str is None or format_str == "":
     data = OrderedDict()
