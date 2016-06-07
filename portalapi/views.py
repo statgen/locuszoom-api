@@ -31,7 +31,12 @@ def handle_exception(error):
   return response
 
 def get_db():
-  return create_engine(URL(**app.config["DATABASE"])).connect()
+  return create_engine(
+    URL(**app.config["DATABASE"]),
+    connect_args = dict(
+      application_name = app.config["DB_APP_NAME"]
+    )
+  ).connect()
 
 @app.before_request
 def before_request():
