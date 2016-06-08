@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
+from sqlalchemy.pool import NullPool
 from flask import g, jsonify, request
 
 from portalapi import app, cache
@@ -35,7 +36,10 @@ def get_db():
     URL(**app.config["DATABASE"]),
     connect_args = dict(
       application_name = app.config["DB_APP_NAME"]
-    )
+    ),
+    pool_size = 5,
+    max_overflow = 0
+    # poolclass = NullPool
   ).connect()
 
 @app.before_request
