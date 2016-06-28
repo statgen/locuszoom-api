@@ -55,6 +55,6 @@ class ProdConfig(BaseConfig):
   CACHE_CONFIG = dict(
     CACHE_TYPE = "filesystem",
     CACHE_DIR = "/home/welchr/projects/api_flask/portalapi/cache/prod/",
-    CACHE_THRESHOLD = 1000,
+    CACHE_THRESHOLD = 5000,
     CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
   )

@@ -203,7 +203,7 @@ def interval_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @app.route(
-  "/v{}/single/".format(app.config["API_VERSION"]),
+  "/v{}/statistic/single/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def single():
@@ -218,7 +218,7 @@ def single():
   return std_response(db_table,db_cols,field_to_col)
 
 @app.route(
-  "/v{}/single/results/".format(app.config["API_VERSION"]),
+  "/v{}/statistic/single/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def single_results():
