@@ -211,11 +211,11 @@ def single():
   db_cols = "id study trait tech build imputed analysis pmid date".split()
 
   # For some reason, this database table has columns that don't match the field names in the filter string.
-  field_to_col = dict(
-    analysis = "id"
-  )
+  # field_to_col = dict(
+    # analysis = "id"
+  # )
 
-  return std_response(db_table,db_cols,field_to_col)
+  return std_response(db_table,db_cols)
 
 @app.route(
   "/v{}/statistic/single/results/".format(app.config["API_VERSION"]),

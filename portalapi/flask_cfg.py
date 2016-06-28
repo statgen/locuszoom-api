@@ -42,7 +42,7 @@ class ProdConfig(BaseConfig):
     port = "5432",
     username = "portaldev_user",
     password = "portaldev_user",
-    database = "api_internal_dev"
+    database = "api_public_prod"
   )
 
   # Name passed along to Postgres for application_name
