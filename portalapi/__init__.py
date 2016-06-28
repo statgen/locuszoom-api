@@ -19,6 +19,9 @@ elif mode == "dev":
 elif mode == "prod":
   print "Starting with production config..."
   app.config.from_object("portalapi.flask_cfg.ProdConfig")
+elif mode == "quick":
+  print "Starting with quick config..."
+  app.config.from_object("portalapi.flask_cfg.QuickConfig")
 else:
   raise Exception, "Unrecognized value for PORTALAPI_MODE: " + mode
 
