@@ -208,7 +208,7 @@ def interval_results():
 )
 def single():
   db_table = "rest.single_analyses"
-  db_cols = "id study trait tech build imputed analysis pmid date".split()
+  db_cols = "id study trait tech build imputed analysis pmid date first_author last_author".split()
 
   # For some reason, this database table has columns that don't match the field names in the filter string.
   # field_to_col = dict(
@@ -223,7 +223,7 @@ def single():
 )
 def single_results():
   db_table = "rest.single_analyses_results"
-  db_cols = "analysis_id variant_name chromosome position ref_allele_freq ref_allele p_value score_test_stat".split()
+  db_cols = "analysis_id variant_name chromosome position ref_allele_freq ref_allele p_value log_pvalue score_test_stat".split()
 
   # For some reason, this database table has columns that don't match the field names in the filter string.
   field_to_col = dict(
@@ -293,3 +293,10 @@ def ld_results():
   outer["data"] = data
 
   return jsonify(outer)
+
+@app.route(
+  "/v{}/annotation/genes/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def genes():
+  pass
