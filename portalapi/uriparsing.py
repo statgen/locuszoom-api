@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas
+from collections import namedtuple
 
 grammar_tests = [
   "analysis in 3, 4 and chromosome eq 10 and start gt 10 and end lt 10000",
@@ -63,6 +64,61 @@ class FilterParser(object):
     matches = self.grammar.parseString(query)
     for match in matches:
       yield match
+
+  def statements(self,query):
+    """
+    Returns only the statements from a filter string.
+
+    Example:
+
+      In [1]: from uriparsing import *
+
+      In [2]: foo = FilterParser()
+
+      In [3]: foo.statements("source = 42 and gene_id = 'ENSG1'")
+      Out[3]:
+      {'gene_id': Statement(field='gene_id', comp='=', value='ENSG1'),
+       'source': Statement(field='source', comp='=', value=42)}
+
+      In [4]: foo.statements("source = 42 and gene_id = 'ENSG1'").get("source").value
+      Out[4]: 42
+
+      In [5]: foo.statements("source in 42, 43, 44 and gene_id = 'ENSG1'").get("source").value
+      Out[5]: [42, 43, 44]
+
+    Args:
+      query: Filter string
+
+    Returns:
+      dict: Mapping from lhs --> statement, where statement is an object having
+        3 attributes: field, comp, value
+    """
+
+    if query is not None:
+      matches = self.grammar.parseString(query)
+    else:
+      return
+
+    params = {}
+    Statement = namedtuple("Statement","field comp value".split())
+
+    for match in matches:
+      if isinstance(match,str):
+        # This would be "AND", "OR", etc.
+        # But we're just looking for statements, so just keep going.
+        pass
+      else:
+        lhs = match.lhs
+        comp = match.comp
+
+        if comp == "in":
+          rhs = list(match.rhs)
+        else:
+          rhs = list(match.rhs)[0]
+
+        params[lhs] = Statement(lhs,comp,rhs)
+
+    return params
 
 class LDAPITranslator(object):
   def __init__(self):
