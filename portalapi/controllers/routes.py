@@ -1,13 +1,11 @@
 #!/usr/bin/env python
+from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
-from sqlalchemy.pool import NullPool
 from flask import g, jsonify, request
-
 from portalapi import app, cache
-
-from collections import OrderedDict
-from uriparsing import SQLCompiler, LDAPITranslator
+from portalapi.uriparsing import SQLCompiler, LDAPITranslator
+from portalapi.models.gene import Gene, Transcript, Exon
 import requests
 
 class FlaskException(Exception):
@@ -56,17 +54,43 @@ def close_db(*args):
   if db is not None:
     db.close()
 
-def std_response(db_table,db_cols,field_to_cols=None):
+def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_format=None):
   """
+  Standard API response for simple cases of executing a filter against a single
+  database table.
+
+  The process is:
+    * Get request arguments
+    * Parse filter statement
+    * Check that fields and ops requested exactly match known ones (to avoid SQL injection)
+    * Create SQL query from filter statement + fields
+    * Execute SQL query
+    * Format data into either key --> array or array -> key:value
+    * Return data
+
+  This should be executed during a request, as it retrieves parameters directly from the request.
 
   Args:
     db_table: database table to query against
     db_cols: possible database columns (used to sanitize user input)
     field_to_cols: if any fields in the filter string need to be translated
       to database columns
+    return_json: should we return the jsonified response (True), or just the dictionary (False)
+    return_format: specify return format, can be:
+      "objects" - returns an array of dictionaries, each one representing an "object"
+      "table" - returns a dictionary of arrays, where key is column name
+
+      This parameter overrides the "format" query parameter, if specified. Leave as None to use the
+      format parameter in the request.
 
   Returns:
-    flask response w/ JSON payload containing the results of the query
+    Flask response w/ JSON payload containing the results of the query
+
+    OR
+
+    The data directly, as either
+      * dictionary of key --> array (rows)
+      * array of dictionaries
   """
 
   # Object that converts filter strings into safe SQL statements
@@ -127,11 +151,13 @@ def std_response(db_table,db_cols,field_to_cols=None):
   else:
     cols_to_field = {v: v for v in db_cols}
 
-  if format_str is None or format_str == "":
+  # Figure out return format.
+  if return_format == "table" or (return_format is None and (format_str is None or format_str == "")):
     data = OrderedDict()
 
     for i, row in enumerate(cur):
       for col in fields:
+        # Some of the database column names don't match field names.
         field = cols_to_field.get(col,col)
 
         val = row[col]
@@ -146,15 +172,26 @@ def std_response(db_table,db_cols,field_to_cols=None):
 
     outer["data"] = data
 
-  elif format_str == "objects":
+  elif return_format == "objects" or format_str == "objects":
     data = []
     for row in cur:
       rowdict = dict(row)
-      data.append(rowdict)
+      finaldict = dict()
+
+      # User may have requested only certain fields
+      for col in fields:
+        # Translate from database column to field name
+        field = cols_to_field.get(col,col)
+        finaldict[field] = rowdict[col]
+
+      data.append(finaldict)
 
     outer["data"] = data
 
-  return jsonify(outer)
+  if return_json:
+    return jsonify(outer)
+  else:
+    return data
 
 @app.route(
   "/v{}/annotation/recomb/".format(app.config["API_VERSION"]),
@@ -299,4 +336,27 @@ def ld_results():
   methods = ["GET"]
 )
 def genes():
-  pass
+  db_table = "rest.genes"
+  db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
+  field_to_col = dict(
+    source = "source_id",
+    start = "interval_start",
+    end = "interval_end",
+    chrom = "chromosome"
+  )
+
+  genes = {}
+  gene_data = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
+
+  # Do they want transcripts too?
+  do_transcripts = request.args.get("transcripts")
+  if do_transcripts is None or do_transcripts.lower() in ("t","true"):
+    # Yup, get transcripts.
+    pass
+
+  outer = {
+    "data": gene_data,
+    "lastPage": None
+  }
+
+  return jsonify(outer)

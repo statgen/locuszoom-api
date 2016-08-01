@@ -34,5 +34,4 @@ cache = Cache(
   config = app.config["CACHE_CONFIG"]
 )
 
-import portalapi.views
-
+from portalapi.controllers import routes
