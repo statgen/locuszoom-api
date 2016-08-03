@@ -2,20 +2,6 @@
 from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas
 from collections import namedtuple
 
-grammar_tests = [
-  "analysis in 3, 4 and chromosome eq 10 and start gt 10 and end lt 10000",
-  "analysis in 1 and chromosome in 20, 22 and start gt 1 and end le 20",
-  "analysis in 5, 6",
-  "some_field eq '20' and another_field eq 99",
-  "id gt 3 and pval lt 5.341e-14",
-  "analysis in 3 and chromosome in 'chrX','chrY' and start gt 5000",
-  "thresholds in 3.7, 4.6, 5.2 and chromsome eq 20",
-  "analysis in 3,4 and start > 42 and end < 800",
-  "reference eq 1 and chromosome2 eq '9'",
-  "reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967",
-  "reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967 and variant1 eq '9:16918_G/C'"
-]
-
 class InvalidFieldException(Exception):
   pass
 
@@ -45,7 +31,7 @@ class FilterParser(object):
     sci = Combine(Word(nums) + Optional(".") + Optional(Word(nums)) + oneOf("e E") + Optional("-") + Word(nums)).setParseAction(lambda x,y,z: float(z[0]))
     int_ = Word(nums).setParseAction(lambda x,y,z: int(z[0]))
 
-    comp = oneOf("in eq gt lt ge le < > =",caseless=True).setResultsName("comp")
+    comp = oneOf("in eq gt lt ge le < > = like",caseless=True).setResultsName("comp")
     op = oneOf("and or",caseless=True).setResultsName("op")
 
     lhs = Word(alphanums+"_").setResultsName("lhs")
@@ -119,6 +105,34 @@ class FilterParser(object):
         params[lhs] = Statement(lhs,comp,rhs)
 
     return params
+
+  @staticmethod
+  def _tests():
+    grammar_tests = [
+      "analysis in 3, 4 and chromosome eq 10 and start gt 10 and end lt 10000",
+      "analysis in 1 and chromosome in 20, 22 and start gt 1 and end le 20",
+      "analysis in 5, 6",
+      "some_field eq '20' and another_field eq 99",
+      "id gt 3 and pval lt 5.341e-14",
+      "analysis in 3 and chromosome in 'chrX','chrY' and start gt 5000",
+      "thresholds in 3.7, 4.6, 5.2 and chromsome eq 20",
+      "analysis in 3,4 and start > 42 and end < 800",
+      "reference eq 1 and chromosome2 eq '9'",
+      "reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967",
+      "reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967 and variant1 eq '9:16918_G/C'",
+      "source in 1 and gene_name like 'TCF*'"
+    ]
+
+    fp = FilterParser()
+    for t in grammar_tests:
+      print t
+      for m in fp.parse(t):
+        if isinstance(m,str):
+          print m
+        else:
+          print m.lhs, m.comp, m.rhs
+
+      print "\n"
 
 class LDAPITranslator(object):
   def __init__(self):
