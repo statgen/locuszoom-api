@@ -386,8 +386,6 @@ def genes():
 
     sources.append(i)
 
-  print params, "\n", sources_tmp, "\n", sources, "\n"
-
   if len(sources) == 0:
     raise FlaskException("No valid sources specified in filter string",400)
 
