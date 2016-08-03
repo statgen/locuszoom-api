@@ -4,9 +4,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from flask import g, jsonify, request
 from portalapi import app, cache
-from portalapi.uriparsing import SQLCompiler, LDAPITranslator
+from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 import requests
+import psycopg2
 
 class FlaskException(Exception):
   status_code = 400
@@ -338,6 +339,8 @@ def ld_results():
 def genes():
   db_table = "rest.genes"
   db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
+
+  # Translate filter string "fields" to database column names
   field_to_col = dict(
     source = "source_id",
     start = "interval_start",
@@ -345,17 +348,91 @@ def genes():
     chrom = "chromosome"
   )
 
-  genes = {}
-  gene_data = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
+  # This is used to translate database column names into the names expected in the response
+  # Unfortunately this is highly inconsistent, but it's in production
+  response_names = {
+    "exon_end": "end",
+    "exon_start": "start",
+    "exon_strand": "strand",
+    "transcript_strand": "strand",
+    "transcript_start": "start",
+    "transcript_end": "end"
+  }
 
-  # Do they want transcripts too?
-  do_transcripts = request.args.get("transcripts")
-  if do_transcripts is None or do_transcripts.lower() in ("t","true"):
-    # Yup, get transcripts.
-    pass
+  # Does the user want transcripts?
+  transcripts_arg = request.args.get("transcripts")
+  do_transcripts = True if transcripts_arg is None or transcripts_arg.lower() in ("t","true") else False
+
+  dgenes = {}
+  data = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
+  for gene_obj in data:
+    if do_transcripts:
+      gene_obj["transcripts"] = []
+
+    dgenes[gene_obj["gene_id"]] = gene_obj
+
+  # Which source IDs were requested? May need this for requesting transcripts/exons, if the user wants them.
+  fp = FilterParser()
+  params = fp.statements(request.args.get("filter"))
+  sources_tmp = params["source"].value
+
+  # Check each source to make sure it's an integer / sanitize user input
+  sources = []
+  for i in sources_tmp:
+    try:
+      i = int(i)
+    except:
+      continue
+
+    sources.append(i)
+
+  print params, "\n", sources_tmp, "\n", sources, "\n"
+
+  if len(sources) == 0:
+    raise FlaskException("No valid sources specified in filter string",400)
+
+#  api_internal_dev=# select * from rest.sp_transcripts_exons('{ENSG00000116649.9,ENSG00000148737.16}'::VARCHAR[],'{1}'::INT[]);
+#  source_id |      gene_id      |   transcript_id   | transcript_name | transcript_chrom | transcript_start | transcript_end | transcript_strand |      exon_id      | exon_start | exon_end | exon_strand
+# -----------+-------------------+-------------------+-----------------+------------------+------------------+----------------+-------------------+-------------------+------------+----------+-------------
+#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00000743124.1 |   11055781 | 11055926 | -
+#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00000743131.1 |   11059225 | 11059345 | -
+#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00001836529.1 |   11059777 | 11060024 | -
+
+  if do_transcripts:
+    # They want transcripts and exons included in the results.
+    cur = g.db.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.callproc(
+      "rest.sp_transcripts_exons",
+      [
+        dgenes.keys(),
+        sources
+      ]
+    )
+
+    dtranscripts = {}
+    for row in cur.fetchall():
+      row = dict(row)
+      tsid = row["transcript_id"]
+      geneid = row["gene_id"]
+
+      # Pull out transcript
+      transcript = dtranscripts.get(tsid,None)
+      if transcript is None:
+        # We've never seen this transcript before. Create it, and add it to the proper gene.
+        transcript = {response_names.get(k,k): v for k, v in row.iteritems() if k in "transcript_id transcript_name transcript_chrom transcript_start transcript_end transcript_strand".split()}
+        transcript["exons"] = []
+        dtranscripts[tsid] = transcript
+        dgenes[geneid]["transcripts"].append(transcript)
+
+      # Pull out exon
+      exon_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "exon_id exon_start exon_end exon_strand".split()}
+      exon_data["chrom"] = transcript["transcript_chrom"]
+      
+      # Add exon to transcript
+      transcript["exons"].append(exon_data)
 
   outer = {
-    "data": gene_data,
+    "data": data,
     "lastPage": None
   }
 
