@@ -297,7 +297,8 @@ class SQLCompiler(object):
       "in": "IN",
       "=": "=",
       ">": ">",
-      "<": "<"
+      "<": "<",
+      'like': 'like'
     }
 
     # If these appear in the SQL string, they need to be quoted.
@@ -352,6 +353,9 @@ class SQLCompiler(object):
           rhs = list(match.rhs)
         else:
           rhs = list(match.rhs)[0]
+
+        if match.comp == "like":
+          rhs = rhs.replace("*","%")
 
         mparam = "p{}".format(pcount)
         if isinstance(rhs,list):
