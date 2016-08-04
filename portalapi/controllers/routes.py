@@ -368,6 +368,7 @@ def genes():
   for gene_obj in data:
     if do_transcripts:
       gene_obj["transcripts"] = []
+      gene_obj["exons"] = OrderedDict()
 
     dgenes[gene_obj["gene_id"]] = gene_obj
 
@@ -411,6 +412,7 @@ def genes():
     for row in cur.fetchall():
       row = dict(row)
       tsid = row["transcript_id"]
+      exonid = row["exon_id"]
       geneid = row["gene_id"]
 
       # Pull out transcript
@@ -425,9 +427,16 @@ def genes():
       # Pull out exon
       exon_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "exon_id exon_start exon_end exon_strand".split()}
       exon_data["chrom"] = transcript["transcript_chrom"]
-      
+
       # Add exon to transcript
       transcript["exons"].append(exon_data)
+
+      # Add exon to gene (the gene will end up with a list of all possible exons)
+      dgenes[geneid]["exons"][exonid] = exon_data
+
+    # Go back and convert exon dicts to lists
+    for gene in dgenes:
+      dgenes[gene]["exons"] = [x for x in sorted(dgenes[gene]["exons"].itervalues(),key = lambda j: j["start"])]
 
   outer = {
     "data": data,
