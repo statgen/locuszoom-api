@@ -364,13 +364,11 @@ def genes():
   do_transcripts = True if transcripts_arg is None or transcripts_arg.lower() in ("t","true") else False
 
   dgenes = {}
-  data = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
-  for gene_obj in data:
-    if do_transcripts:
-      gene_obj["transcripts"] = []
-      gene_obj["exons"] = OrderedDict()
-
-    dgenes[gene_obj["gene_id"]] = gene_obj
+  genes_array = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
+  for i, gene_data in enumerate(genes_array):
+    gene = Gene(**gene_data)
+    dgenes[gene_data["gene_id"]] = gene
+    genes_array[i] = gene
 
   # Which source IDs were requested? May need this for requesting transcripts/exons, if the user wants them.
   fp = FilterParser()
@@ -412,34 +410,34 @@ def genes():
     for row in cur.fetchall():
       row = dict(row)
       tsid = row["transcript_id"]
-      exonid = row["exon_id"]
       geneid = row["gene_id"]
+      chrom = row["transcript_chrom"]
 
       # Pull out transcript
       transcript = dtranscripts.get(tsid,None)
       if transcript is None:
         # We've never seen this transcript before. Create it, and add it to the proper gene.
-        transcript = {response_names.get(k,k): v for k, v in row.iteritems() if k in "transcript_id transcript_name transcript_chrom transcript_start transcript_end transcript_strand".split()}
-        transcript["exons"] = []
+        transcript_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "transcript_id transcript_name transcript_chrom transcript_start transcript_end transcript_strand".split()}
+        transcript = Transcript(**transcript_data)
+
         dtranscripts[tsid] = transcript
-        dgenes[geneid]["transcripts"].append(transcript)
+        dgenes[geneid].add_transcript(transcript)
 
       # Pull out exon
       exon_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "exon_id exon_start exon_end exon_strand".split()}
-      exon_data["chrom"] = transcript["transcript_chrom"]
+      exon_data["chrom"] = chrom
+      exon = Exon(**exon_data)
 
       # Add exon to transcript
-      transcript["exons"].append(exon_data)
+      transcript.add_exon(exon)
 
       # Add exon to gene (the gene will end up with a list of all possible exons)
-      dgenes[geneid]["exons"][exonid] = exon_data
+      dgenes[geneid].add_exon(exon)
 
-    # Go back and convert exon dicts to lists
-    for gene in dgenes:
-      dgenes[gene]["exons"] = [x for x in sorted(dgenes[gene]["exons"].itervalues(),key = lambda j: j["start"])]
+  json_genes = [gg.to_dict() for gg in genes_array]
 
   outer = {
-    "data": data,
+    "data": json_genes,
     "lastPage": None
   }
 
