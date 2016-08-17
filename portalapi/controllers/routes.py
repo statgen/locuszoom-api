@@ -6,6 +6,7 @@ from flask import g, jsonify, request
 from portalapi import app, cache
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
+from pyparsing import ParseException
 import requests
 import psycopg2
 
@@ -28,6 +29,15 @@ class FlaskException(Exception):
 def handle_exception(error):
   response = jsonify(error.to_dict())
   response.status_code = error.status_code
+  return response
+
+@app.errorhandler(ParseException)
+def handle_parse_error(error):
+  response = jsonify({
+    "message": "Incorrect syntax in filter string, error was: " + error.msg
+  })
+
+  response.status_code = 400
   return response
 
 def get_db():
