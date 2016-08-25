@@ -26,7 +26,7 @@ class DevConfig(BaseConfig):
   # Cache settings
   CACHE_CONFIG = dict(
     CACHE_TYPE = "filesystem",
-    CACHE_DIR = "/home/welchr/projects/api_flask/portalapi/cache/dev/",
+    CACHE_DIR = "/home/portaldev/api_flask/portalapi/cache/dev/",
     CACHE_THRESHOLD = 1000,
     CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
   )
@@ -54,7 +54,7 @@ class ProdConfig(BaseConfig):
   # Cache settings
   CACHE_CONFIG = dict(
     CACHE_TYPE = "filesystem",
-    CACHE_DIR = "/home/welchr/projects/api_flask/portalapi/cache/prod/",
+    CACHE_DIR = "/home/portaldev/api_flask/portalapi/cache/prod/",
     CACHE_THRESHOLD = 5000,
     CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
   )
@@ -82,7 +82,7 @@ class QuickConfig(BaseConfig):
   # Cache settings
   CACHE_CONFIG = dict(
     CACHE_TYPE = "filesystem",
-    CACHE_DIR = "/home/welchr/projects/api_flask/portalapi/cache/quick/",
+    CACHE_DIR = "/home/portaldev/api_flask/portalapi/cache/quick/",
     CACHE_THRESHOLD = 5000,
     CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
   )
