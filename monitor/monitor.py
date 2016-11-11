@@ -6,7 +6,9 @@ from termcolor import colored
 import os, sys, psutil, time, requests
 
 INTERVAL_TIME = 30 # seconds
-WEBHOOK_URL = "https://hooks.slack.com/services/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"
+with open("webhook") as fp:
+  WEBHOOK_URL = fp.read().strip()
+
 API_TEST_URLS = [
   "http://portaldev.sph.umich.edu/api/v1/annotation/recomb/results/?filter=id in 15 and chromosome eq '7' and position le 28496413 and position ge 27896413",
   "http://portaldev.sph.umich.edu/api/v1/annotation/genes/?filter=source in 2 and chrom eq '7' and start le 28496413 and end ge 27896413",
