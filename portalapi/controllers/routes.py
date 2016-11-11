@@ -10,6 +10,17 @@ from pyparsing import ParseException
 import requests
 import psycopg2
 
+engine = create_engine(
+  URL(**app.config["DATABASE"]),
+  connect_args = dict(
+    application_name = app.config["DB_APP_NAME"]
+  ),
+  pool_size = 5,
+  max_overflow = 0,
+  isolation_level = "AUTOCOMMIT"
+  # poolclass = NullPool
+)
+
 class FlaskException(Exception):
   status_code = 400
 
@@ -40,22 +51,13 @@ def handle_parse_error(error):
   response.status_code = 400
   return response
 
-def get_db():
-  return create_engine(
-    URL(**app.config["DATABASE"]),
-    connect_args = dict(
-      application_name = app.config["DB_APP_NAME"]
-    ),
-    pool_size = 5,
-    max_overflow = 0
-    # poolclass = NullPool
-  ).connect()
-
 @app.before_request
 def before_request():
+  global engine
+
   db = getattr(g,"db",None)
   if db is None:
-    db = get_db()
+    db = engine.connect()
 
   g.db = db
 
