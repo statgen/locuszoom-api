@@ -12,7 +12,8 @@ with open("webhook") as fp:
 API_TEST_URLS = [
   "http://portaldev.sph.umich.edu/api/v1/annotation/recomb/results/?filter=id in 15 and chromosome eq '7' and position le 28496413 and position ge 27896413",
   "http://portaldev.sph.umich.edu/api/v1/annotation/genes/?filter=source in 2 and chrom eq '7' and start le 28496413 and end ge 27896413",
-  "http://portaldev.sph.umich.edu/api/v1/pair/LD/results/?filter=reference eq 1 and chromosome2 eq '7' and position2 ge 27896413 and position2 le 28496413 and variant1 eq '7:28180556_T/C'"
+  "http://portaldev.sph.umich.edu/api/v1/pair/LD/results/?filter=reference eq 1 and chromosome2 eq '7' and position2 ge 27896413 and position2 le 28496413 and variant1 eq '7:28180556_T/C'",
+  "http://portaldev.sph.umich.edu/api/v1/annotation/intervals/results/?filter=id in 16 and chromosome eq '2' and start < 24200"
 ]
 
 def is_flask(proc):
