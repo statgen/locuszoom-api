@@ -29,7 +29,7 @@ with open(cfg) as f:
   exec(code)
 
 # If number of database connections exceeds this number, send warning.
-CON_COUNT_WARN = 20
+CON_COUNT_WARN = 250
 
 # How often to poll/check up on things?
 INTERVAL_TIME = 30 # seconds
@@ -60,7 +60,8 @@ def msg_json(server,event,url=None,cwd=None,error=None,color="danger"):
   json = {
     "attachments": [{
       "color": color,
-      "pretext": "An API server event occurred",
+      "pretext": "API/database monitor event",
+      "fallback": "{} / {} / {}".format(server,event,error if error else ""),
       "fields": [
         {
           "title": "Server",
