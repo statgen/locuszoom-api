@@ -6,8 +6,34 @@ from termcolor import colored
 import os, sys, psutil, time, requests
 from signal import signal, SIGTERM, SIGINT
 import atexit
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
 
+def whereami():
+  import sys
+  from os import path
+  from socket import gethostname
+
+  here = path.dirname(path.abspath(sys.argv[0]))
+
+  if gethostname() == "snowwhite":
+    here.replace("exports","net/snowwhite")
+
+  return here
+
+# Load configurations
+cfg = os.path.abspath(os.path.join(whereami(),"../flask_cfg.py"))
+print(cfg)
+with open(cfg) as f:
+  code = compile(f.read(), cfg, 'exec')
+  exec(code)
+
+# If number of database connections exceeds this number, send warning.
+CON_COUNT_WARN = 20
+
+# How often to poll/check up on things?
 INTERVAL_TIME = 30 # seconds
+
 with open("webhook") as fp:
   WEBHOOK_URL = fp.read().strip()
 
@@ -106,6 +132,41 @@ def find_flask_servers():
       servers.append(s)
 
   return servers
+
+def monitor_database():
+  history = {}
+  while 1:
+    for config in [ProdConfig,DevConfig]:
+      db_name = config.DATABASE["database"]
+      history.setdefault(db_name,{"time": 0,"count": 0})
+
+      print("Checking database connections for '{}'...".format(db_name))
+
+      db_url = URL(
+        "postgres",
+        "admin",
+        None,
+        config.DATABASE["host"],
+        config.DATABASE["port"],
+        db_name
+      )
+
+      engine = create_engine(db_url,isolation_level="AUTOCOMMIT")
+
+      max_con = int(engine.execute("SHOW max_connections").fetchone()[0])
+      connection_count = int(engine.execute("select count(*) from pg_stat_activity").fetchone()[0])
+      if connection_count > CON_COUNT_WARN and history[db_name]["count"] <= CON_COUNT_WARN:
+        # Previously the connection count was OK, now it's bad. Notify.
+        send_slack(
+          "Postgres ({})".format(db_name),
+          "Large number of DB connections",
+          error="Database currently has {} connections out max {}".format(connection_count,max_con),
+          color="warning"
+        )
+
+      history[db_name]["count"] = connection_count
+
+    time.sleep(INTERVAL_TIME)
 
 def monitor_flask():
   procs = {}
@@ -220,7 +281,10 @@ if __name__ == "__main__":
   proc_api = Process(target=monitor_api_endpoints)
   proc_api.start()
 
+  proc_db = Process(target=monitor_database)
+  proc_db.start()
+
   proc_flask.join()
   proc_api.join()
-
+  proc_db.join()
 
