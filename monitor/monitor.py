@@ -4,6 +4,8 @@ from multiprocessing import Process
 from urllib.parse import urlparse
 from termcolor import colored
 import os, sys, psutil, time, requests
+from signal import signal, SIGTERM, SIGINT
+import atexit
 
 INTERVAL_TIME = 30 # seconds
 with open("webhook") as fp:
@@ -28,10 +30,10 @@ def get_process(pid):
   except:
     return None
 
-def msg_json(server,event,url=None,cwd=None,error=None):
+def msg_json(server,event,url=None,cwd=None,error=None,color="danger"):
   json = {
     "attachments": [{
-      "color": "danger",
+      "color": color,
       "pretext": "An API server event occurred",
       "fields": [
         {
@@ -74,6 +76,16 @@ def msg_json(server,event,url=None,cwd=None,error=None):
 
 def send_slack(*args,**kwargs):
   requests.post(WEBHOOK_URL,json=msg_json(*args,**kwargs))
+
+def end(*args,**kwargs):
+  if len(args) == 2 and hasattr(args[1],"f_trace"):
+    sys.exit("Terminated by signal " + str(args[0]))
+  else:
+    send_slack("Monitor","Monitor was terminated")
+
+atexit.register(end)
+signal(SIGTERM,end)
+signal(SIGINT,end)
 
 class FlaskServerInfo(object):
   def __init__(self,mode,pid,cwd):
