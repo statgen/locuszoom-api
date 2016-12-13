@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import redis, json
 from six import iteritems
+from collections import OrderedDict
 
 class IntervalCache:
   __metaclass__ = ABCMeta
@@ -126,7 +127,7 @@ class RedisIntervalCache(IntervalCache):
       # the return of subintervals, return None to signify a computation is needed.
       return None
 
-    data = {}
+    data = OrderedDict()
     for record in self.red.zrangebyscore(zset,start,end,withscores=True):
       pos = int(record[1])
       value = json.loads(record[0])
