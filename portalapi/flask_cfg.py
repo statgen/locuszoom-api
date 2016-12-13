@@ -17,6 +17,11 @@ class DevConfig(BaseConfig):
     database = "api_internal_dev"
   )
 
+  # Redis settings
+  REDIS_HOST = "localhost"
+  REDIS_PORT = "6379"
+  REDIS_DB = 1
+
   # Name passed along to Postgres for application_name
   DB_APP_NAME = "portalapi-flaskdbg"
 
@@ -45,6 +50,11 @@ class ProdConfig(BaseConfig):
     database = "api_public_prod"
   )
 
+  # Redis settings
+  REDIS_HOST = "localhost"
+  REDIS_PORT = "6379"
+  REDIS_DB = 0
+
   # Name passed along to Postgres for application_name
   DB_APP_NAME = "portalapi-flask"
 
@@ -72,6 +82,11 @@ class QuickConfig(BaseConfig):
     password = "portaldev_user",
     database = "api_public_prod"
   )
+
+  # Redis settings
+  REDIS_HOST = "localhost"
+  REDIS_PORT = "6379"
+  REDIS_DB = 2
 
   # Name passed along to Postgres for application_name
   DB_APP_NAME = "portalapi-flask"

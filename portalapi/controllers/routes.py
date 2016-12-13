@@ -6,9 +6,12 @@ from flask import g, jsonify, request
 from portalapi import app, cache
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
+from portalapi.cache import RedisIntervalCache
 from pyparsing import ParseException
+from six import iteritems
 import requests
 import psycopg2
+import redis
 
 engine = create_engine(
   URL(**app.config["DATABASE"]),
@@ -19,6 +22,12 @@ engine = create_engine(
   max_overflow = 0,
   isolation_level = "AUTOCOMMIT"
   # poolclass = NullPool
+)
+
+redis_client = redis.StrictRedis(
+  host = app.config["REDIS_HOST"],
+  port = app.config["REDIS_PORT"],
+  db = app.config["REDIS_DB"]
 )
 
 class FlaskException(Exception):
@@ -284,22 +293,16 @@ def single_results():
 
   return std_response(db_table,db_cols,field_to_col)
 
-def make_cache_key(*args,**kwargs):
-  return request.url
-
 @app.route(
   "/v{}/statistic/pair/LD/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
-@cache.cached(key_prefix=make_cache_key)
 def ld_results():
-  print "Cache miss, calculating LD for request: {}".format(request.url)
-
   # GET request parameters
   filter_str = request.args.get("filter")
-  fields_str = request.args.get("fields")
-  sort_str = request.args.get("sort")
-  format_str = request.args.get("format")
+  #fields_str = request.args.get("fields")
+  #sort_str = request.args.get("sort")
+  #format_str = request.args.get("format")
 
   if filter_str is None:
     raise FlaskException("No filter string specified",400)
@@ -308,20 +311,33 @@ def ld_results():
   #base_url = "http://localhost:8888/api_ld/ld?"
   base_url = "http://portaldev.sph.umich.edu/api_ld/ld?"
   trans = LDAPITranslator()
-  param_str = trans.to_refsnp_url(filter_str)
+  param_str, param_dict = trans.to_refsnp_url(filter_str)
   final_url = base_url + param_str
 
-  # Fire off the request to the LD server.
+  # Cache
+  ld_cache = RedisIntervalCache(redis_client)
+
+  # Cache key for this particular request.
+  # Note that in Daniel's API, for now, "reference" is implicitly
+  # attached to build, reference panel, and population all at the same time.
+  # In the future, it will hopefully expand to accepting paramters for all 3, and
+  # then we can include this in the cache key.
+  refvariant = param_dict["variant1"]["eq"][0]
+  reference = param_dict["reference"]["eq"][0]
+
+  cache_key = "{reference}__{refvariant}".format(
+    reference = reference,
+    refvariant = refvariant
+  )
+
   try:
-    resp = requests.get(final_url)
-  except Exception as e:
-    raise FlaskException("Failed retrieving data from LD server, error was {}".format(e.message),500)
+    start = int(param_dict["position2"]["ge"][0])
+    end = int(param_dict["position2"]["le"][0])
+  except:
+    raise FlaskException("position2 compared to non-integer",400)
 
-  # Did it come back OK?
-  if not resp.ok:
-    raise FlaskException("Failed retrieving data from LD server, error was {}".format(resp.reason),500)
+  chromosome = param_dict["chromosome2"]["eq"][0]
 
-  ld_json = resp.json()
   outer = {
     "data": None,
     "lastPage": None
@@ -334,13 +350,51 @@ def ld_results():
     "variant2": []
   }
 
-  for obj in ld_json["pairs"]:
-    data["chromosome2"].append(ld_json["chromosome"])
-    data["position2"].append(obj["position2"])
-    data["rsquare"].append(obj["rsquare"])
-    data["variant2"].append(obj["name2"])
-
   outer["data"] = data
+
+  # Do we need to compute, or is the cache sufficient?
+  cache_data = ld_cache.retrieve(cache_key,start,end)
+  if cache_data is None:
+    # We need to compute a larger region, since we haven't cached out that far yet.
+    print "Cache miss for {reference}__{refvariant} in {start}-{end}, recalculating".format(reference=reference,refvariant=refvariant,start=start,end=end)
+
+    # Fire off the request to the LD server.
+    try:
+      resp = requests.get(final_url)
+    except Exception as e:
+      raise FlaskException("Failed retrieving data from LD server, error was {}".format(e.message),500)
+
+    # Did it come back OK?
+    if not resp.ok:
+      raise FlaskException("Failed retrieving data from LD server, error was {}".format(resp.reason),500)
+
+    # Get JSON
+    ld_json = resp.json()
+
+    # Store in format needed for API response
+    for obj in ld_json["pairs"]:
+      data["chromosome2"].append(ld_json["chromosome"])
+      data["position2"].append(obj["position2"])
+      data["rsquare"].append(obj["rsquare"])
+      data["variant2"].append(obj["name2"])
+
+    # Store data to cache
+    for_cache = dict(zip(
+      (x["position2"] for x in ld_json["pairs"]),
+      (x for x in ld_json["pairs"])
+    ))
+    
+    ld_cache.store(cache_key,start,end,for_cache)
+
+  else:
+    print "Cache *match* for {reference}__{refvariant} in {start}-{end}, using cached data".format(reference=reference,refvariant=refvariant,start=start,end=end)
+
+    # We can just use the cache's data directly.
+    for position, ld_pair in iteritems(cache_data):
+      data["chromosome2"].append(chromosome)
+      data["position2"].append(ld_pair["position2"])
+      data["rsquare"].append(ld_pair["rsquare"])
+      data["variant2"].append(ld_pair["name2"])
 
   return jsonify(outer)
 

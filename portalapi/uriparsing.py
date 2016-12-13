@@ -157,6 +157,8 @@ class LDAPITranslator(object):
 
     Returns:
       string: URL constructed from the filter string
+      dict: field -> [(operator,value)]
+        List is necessary because a field can be specified multiple times, e.g. position2 le 10 and position2 ge 1
     """
 
     # filter: reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967 and variant1 eq '9:16918_G/C'
@@ -198,6 +200,7 @@ class LDAPITranslator(object):
       matches = []
 
     url = []
+    parsed = {}
     for match in matches:
       if isinstance(match,str):
         if match == 'and':
@@ -220,6 +223,9 @@ class LDAPITranslator(object):
 
         v_rhs = rhs[0]
         v_lhs = match.lhs
+
+        # Need to store for return, but we need the values before translation to the LD API.
+        parsed.setdefault(v_lhs,{}).setdefault(match.comp,[]).append(v_rhs)
 
         # Handle reference. The LD server expects "ALL" or "EUR", we receive 1, 2, etc.
         if v_lhs == "reference":
@@ -247,7 +253,7 @@ class LDAPITranslator(object):
 
         url.append("{}={}".format(v_lhs,v_rhs))
 
-    return "&".join(url)
+    return "&".join(url), parsed
 
 class SQLCompiler(object):
   def __init__(self):
