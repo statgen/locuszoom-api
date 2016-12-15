@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-import redis, json
+import msgpack
 from six import iteritems
 from collections import OrderedDict
 
@@ -107,7 +107,7 @@ class RedisIntervalCache(IntervalCache):
     for k, v in iteritems(data):
       v_serial = v
       if not isinstance(v,str):
-        v_serial = json.dumps(v)
+        v_serial = msgpack.packb(v)
 
       pipe.zadd(zset,k,v_serial)
 
@@ -130,7 +130,7 @@ class RedisIntervalCache(IntervalCache):
     data = OrderedDict()
     for record in self.red.zrangebyscore(zset,start,end,withscores=True):
       pos = int(record[1])
-      value = json.loads(record[0])
+      value = msgpack.unpackb(record[0])
       data[pos] = value
 
     return data

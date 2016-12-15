@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from cStringIO import StringIO as IO
 from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
@@ -12,6 +13,8 @@ from six import iteritems
 import requests
 import psycopg2
 import redis
+import traceback
+import gzip
 
 engine = create_engine(
   URL(**app.config["DATABASE"]),
@@ -75,6 +78,39 @@ def close_db(*args):
   db = getattr(g,"db",None)
   if db is not None:
     db.close()
+
+@app.after_request
+def zipper(response):
+  if not request.args.get("compress"):
+    return response
+
+  accept_encoding = request.headers.get('Accept-Encoding', '')
+
+  if 'gzip' not in accept_encoding.lower():
+    return response
+
+  response.direct_passthrough = False
+
+  if (response.status_code < 200 or
+    response.status_code >= 300 or
+    'Content-Encoding' in response.headers):
+    return response
+
+  gzip_buffer = IO()
+  gzip_file = gzip.GzipFile(mode='wb',fileobj=gzip_buffer)
+  gzip_file.write(response.data)
+  gzip_file.close()
+
+  response.data = gzip_buffer.getvalue()
+  response.headers['Content-Encoding'] = 'gzip'
+  response.headers['Vary'] = 'Accept-Encoding'
+  response.headers['Content-Length'] = len(response.data)
+
+  return response
+
+class JSONFloat(float):
+  def __repr__(self):
+    return "%0.2g" % self
 
 def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_format=None):
   """
@@ -353,9 +389,16 @@ def ld_results():
   outer["data"] = data
 
   # Do we need to compute, or is the cache sufficient?
-  cache_data = ld_cache.retrieve(cache_key,start,end)
+  try:
+    cache_data = ld_cache.retrieve(cache_key,start,end)
+  except:
+    print "Warning: cache retrieval failed, traceback was: "
+    traceback.print_exc()
+    cache_data = None
+
   if cache_data is None:
-    # We need to compute a larger region, since we haven't cached out that far yet.
+    # Need to compute. Either the range given is larger than we've previously computed,
+    # or redis is down.
     print "Cache miss for {reference}__{refvariant} in {start}-{end}, recalculating".format(reference=reference,refvariant=refvariant,start=start,end=end)
 
     # Fire off the request to the LD server.
@@ -375,16 +418,21 @@ def ld_results():
     for obj in ld_json["pairs"]:
       data["chromosome2"].append(ld_json["chromosome"])
       data["position2"].append(obj["position2"])
-      data["rsquare"].append(obj["rsquare"])
+      data["rsquare"].append(JSONFloat(obj["rsquare"]))
       data["variant2"].append(obj["name2"])
 
     # Store data to cache
+    keep = ("name2","rsquare")
     for_cache = dict(zip(
       (x["position2"] for x in ld_json["pairs"]),
-      (x for x in ld_json["pairs"])
+      (dict((x,d[x]) for x in keep) for d in ld_json["pairs"])
     ))
-    
-    ld_cache.store(cache_key,start,end,for_cache)
+
+    try:
+      ld_cache.store(cache_key,start,end,for_cache)
+    except:
+      print "Warning: storing data in cache failed, traceback was: "
+      traceback.print_exc()
 
   else:
     print "Cache *match* for {reference}__{refvariant} in {start}-{end}, using cached data".format(reference=reference,refvariant=refvariant,start=start,end=end)
@@ -392,11 +440,13 @@ def ld_results():
     # We can just use the cache's data directly.
     for position, ld_pair in iteritems(cache_data):
       data["chromosome2"].append(chromosome)
-      data["position2"].append(ld_pair["position2"])
-      data["rsquare"].append(ld_pair["rsquare"])
+      data["position2"].append(position)
+      data["rsquare"].append(JSONFloat(ld_pair["rsquare"]))
       data["variant2"].append(ld_pair["name2"])
 
-  return jsonify(outer)
+  final_resp = jsonify(outer)
+
+  return final_resp
 
 @app.route(
   "/v{}/annotation/genes/".format(app.config["API_VERSION"]),
