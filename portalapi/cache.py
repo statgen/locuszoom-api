@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import msgpack
 from six import iteritems
+from six.moves.cPickle import dumps, loads
 from collections import OrderedDict
+from intervaltree import IntervalTree, Interval
 
 class IntervalCache:
   __metaclass__ = ABCMeta
@@ -84,6 +86,26 @@ class IntervalCache:
 
     pass
 
+def interval_contained(tree,interval):
+  if not isinstance(interval,Interval):
+    interval = Interval(*interval)
+
+  return any([i.contains_interval(interval) for i in tree.search(interval)])
+
+# def find_disjoint(tree,query):
+#   """
+#   Will use this in later iteration if we want to tell LD API exactly what interval
+#   it needs to calculate beyond what is already cached
+#   """
+#
+#   overlaps = tree.search(query)
+#   qtree = IntervalTree([query])
+#
+#   for o in overlaps:
+#     qtree.chop(o.begin,o.end)
+#
+#   return qtree
+
 class RedisIntervalCache(IntervalCache):
   def __init__(self,redis_client=None):
     if redis_client is None:
@@ -92,10 +114,21 @@ class RedisIntervalCache(IntervalCache):
     self.red = redis_client
 
   def store(self,key,start,end,data):
+    # Which intervals have we already stored?
+    redis_itree = self.red.hget(key,"itree")
+    if redis_itree is None:
+      itree = IntervalTree()
+    else:
+      itree = loads(redis_itree)
+
+    # Add our new interval into the tree
+    interval = Interval(start,end)
+    itree = itree | IntervalTree([interval])
+    itree.merge_overlaps()
+
     zset = key + "__zset" # name of the redis sorted set
     self.red.hmset(key,{
-      "start": start,
-      "end": end,
+      "itree": dumps(itree),
       "zset": zset
     })
 
@@ -118,11 +151,11 @@ class RedisIntervalCache(IntervalCache):
     if not self.red.exists(key):
       return None
 
-    stored_start = int(self.red.hget(key,"start"))
-    stored_end = int(self.red.hget(key,"end"))
+    itree = loads(self.red.hget(key,"itree"))
     zset = self.red.hget(key,"zset")
 
-    if (stored_start > start or stored_end < end) and not force_subinterval:
+    interval = Interval(start,end)
+    if not interval_contained(itree,interval) and not force_subinterval:
       # If the region previously calculated is too small, and we're not forcing
       # the return of subintervals, return None to signify a computation is needed.
       return None
