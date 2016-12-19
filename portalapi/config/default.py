@@ -27,3 +27,7 @@ CACHE_CONFIG = dict(
   CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
 )
 
+# Maximum distance from a reference variant that we will allow
+# for LD calculations
+LD_MAX_FLANK = int(3E6)
+

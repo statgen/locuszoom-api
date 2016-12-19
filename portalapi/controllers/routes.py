@@ -360,6 +360,7 @@ def ld_results():
   # then we can include this in the cache key.
   refvariant = param_dict["variant1"]["eq"][0]
   reference = param_dict["reference"]["eq"][0]
+  refpos = int(refvariant.split("_")[0].split(":")[1])
 
   cache_key = "{reference}__{refvariant}".format(
     reference = reference,
@@ -373,6 +374,12 @@ def ld_results():
     raise FlaskException("position2 compared to non-integer",400)
 
   chromosome = param_dict["chromosome2"]["eq"][0]
+  rlength = abs(end - start)
+
+  # Is the region larger than we're willing to calculate?
+  max_flank = app.config["LD_MAX_FLANK"]
+  if abs(refpos - start) > max_flank or abs(refpos - end) > max_flank:
+    raise FlaskException("Distance requested from refsnp for LD calculation too far",413)
 
   outer = {
     "data": None,
@@ -399,7 +406,13 @@ def ld_results():
   if cache_data is None:
     # Need to compute. Either the range given is larger than we've previously computed,
     # or redis is down.
-    print "Cache miss for {reference}__{refvariant} in {start}-{end}, recalculating".format(reference=reference,refvariant=refvariant,start=start,end=end)
+    print "Cache miss for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), recalculating".format(
+      reference=reference,
+      refvariant=refvariant,
+      start=start,
+      end=end,
+      rlength=rlength/1000
+    )
 
     # Fire off the request to the LD server.
     try:
@@ -435,7 +448,13 @@ def ld_results():
       traceback.print_exc()
 
   else:
-    print "Cache *match* for {reference}__{refvariant} in {start}-{end}, using cached data".format(reference=reference,refvariant=refvariant,start=start,end=end)
+    print "Cache *match* for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), using cached data".format(
+      reference=reference,
+      refvariant=refvariant,
+      start=start,
+      end=end,
+      rlength=rlength/1000
+    )
 
     # We can just use the cache's data directly.
     for position, ld_pair in iteritems(cache_data):
