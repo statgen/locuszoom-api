@@ -8,6 +8,7 @@ from portalapi import app, cache
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 from portalapi.cache import RedisIntervalCache
+from portalapi.search_tokenizer import SearchTokenizer
 from pyparsing import ParseException
 from six import iteritems
 import requests
@@ -70,8 +71,14 @@ def before_request():
   db = getattr(g,"db",None)
   if db is None:
     db = engine.connect()
-
   g.db = db
+
+  # Hard coded for now - should look up from DB
+  build_id = getattr(g, "build_id", None)
+  if build_id is None:
+    build_id = {"grch37": {"db_snp": 9, "genes": 2},
+        "grch38": {"genes": 1}}
+    g.build_id = build_id
 
 @app.teardown_appcontext
 def close_db(*args):
@@ -577,3 +584,137 @@ def genes():
   }
 
   return jsonify(outer)
+
+
+@app.route(
+  "/v{}/annotation/omnisearch/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def omnisearch():
+    """
+    This function is meant to take a generic search term and return
+    a genomic position
+
+    We will support the following search types
+    * chr:position
+    * chr:start-stop
+    * chr:position+offset (-> chr:position-offset - chr:position+offset)
+    * rs00001
+    * rs00001+offset
+    * gene symbol names
+    * transcript names
+
+    Positions and offsets may have commas and use K and M suffixes
+    """
+
+    def gene_lookup_base(x, filter_str, build):
+        build_id = g.build_id.get(build, {}).get("genes", None)
+        if build_id is None:
+            x["error"] = "Genes not available for build"
+            return x
+        filter_str = " and ".join([f for f in [filter_str, "source_id eq {}".format(build_id)] if len(f)>0])
+        sql_complier = SQLCompiler()
+        fields = ["source_id", "chromosome", "gene_name", "gene_id", "interval_start", "interval_end"]
+        db_table = "rest.genes"
+        sort_fields = ["chromosome","interval_start"]
+        db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
+        sql, params = sql_complier.to_sql(filter_str, db_table, db_cols, fields, sort_fields, None)
+        cur = g.db.execute(text(sql), params)
+        results = cur.fetchmany(2)
+        if len(results)==1:
+            row = results[0]
+            x["chrom"] = row["chromosome"]
+            x["start"] = row["interval_start"] - x.get("offset", 0)
+            x["end"] = row["interval_end"] + x.get("offset", 0)
+            x["gene_name"] = row["gene_name"]
+            x["gene_id"] = row["gene_id"]
+            del x["q"]
+            del x["offset"]
+            return x
+        elif len(results)==0:
+            x["error"] = "Gene not found"
+            return x
+        elif len(results)>1:
+            x["error"] = "Gene name not unique"
+            return x
+
+    def gene_name_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "gene_name eq '{}'".format(term) 
+        return gene_lookup_base(x, filter_str, build)
+
+    def gene_id_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "gene_id like '{}%'".format(term) 
+        return gene_lookup_base(x, filter_str, build)
+  
+    def rs_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        build_id = g.build_id.get(build, {}).get("db_snp", None)
+        if build_id is None:
+            x["error"] = "SNP positions not available for build"
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "id eq {} and rsid eq '{}'".format(build_id, term) 
+        fields = ["chrom", "pos"]
+        db_table = "rest.dbsnp_snps"
+        sort_fields = ["chrom","pos"]
+        db_cols = "id rsid chrom pos ref alt".split()
+        sql, params = sql_complier.to_sql(filter_str, db_table, db_cols, fields, sort_fields, None)
+        cur = g.db.execute(text(sql), params)
+        results = cur.fetchmany(2)
+        if len(results)==1:
+            row = results[0]
+            x["chrom"] = row["chrom"]
+            x["start"] = row["pos"] - x.get("offset", 0)
+            x["end"] = row["pos"] + x.get("offset", 0)
+            del x["q"]
+            del x["offset"]
+            return x
+        elif len(results)==0:
+            x["error"] = "SNP not found"
+            return x
+        elif len(results)>1:
+            x["error"] = "SNP not unique"
+            return x
+
+    term_arg = request.args.get("q")
+    build_arg = request.args.get("build")
+
+    if term_arg is None or build_arg is None:
+        resp = jsonify({"error": "Missing 1 or more required parameters: q, build"})
+        resp.status_code = 422
+        return resp
+
+    if build_arg.lower() not in g.build_id:
+        resp = jsonify({"error": "Unrecognized build (" + build_arg + "), known: " + ", ".join(g.build_id.keys())})
+        resp.status_code = 422
+        return resp
+    build = build_arg.lower()
+
+    st = SearchTokenizer(term_arg)
+    results = []
+    for x in st.get_terms():
+        if "type" not in x:
+            results.append(x)
+        elif x["type"] == "region":
+            results.append(x)
+        elif x["type"] == "rs":
+            results.append(rs_lookup(x, build))
+        elif x["type"] == "egene":
+            results.append(gene_id_lookup(x, build))
+        elif x["type"] == "other":
+            results.append(gene_name_lookup(x, build))
+        else:
+            x["error"] = "Cannot look up position"
+            results.append(x)
+
+    return jsonify({"build": build, "data": results})
