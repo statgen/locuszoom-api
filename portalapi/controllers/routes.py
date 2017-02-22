@@ -9,7 +9,7 @@ from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 from portalapi.cache import RedisIntervalCache
 from portalapi.search_tokenizer import SearchTokenizer
-from pyparsing import ParseException
+from pyparsing import ParseException, ParseResults
 from six import iteritems
 import requests
 import psycopg2
@@ -119,7 +119,7 @@ class JSONFloat(float):
   def __repr__(self):
     return "%0.2g" % self
 
-def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_format=None):
+def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None):
   """
   Standard API response for simple cases of executing a filter against a single
   database table.
@@ -193,51 +193,60 @@ def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_for
   else:
     sort_fields = None
 
-  # if filter_str is not None:
-  #   sql, params = fparser.parse_into_sql(filter_str,db_table,db_cols,fields,sort_fields)
-  # else:
-  #   sql = "SELECT * FROM {}".format(db_table)
-  #   params = []
-
-  sql, params = sql_compiler.to_sql(filter_str,db_table,db_cols,fields,sort_fields,field_to_cols)
+  sql, params = sql_compiler.to_sql(filter_str, db_table, db_cols, fields, sort_fields, field_to_cols)
 
   # text() is sqlalchemy helper object when specifying SQL as plain text string
   # allows for bind parameters to be used
   cur = g.db.execute(text(sql),params)
 
-  outer = {
-    "data": None,
-    "lastPage": None
-  }
+  if return_format == "table" or (return_format is None and (format_str is None or format_str == "")):
+    style = "table"
+  elif return_format == "objects" or format_str == "objects":
+    style = "objects"
+
+  data = reshape_data(cur, fields, field_to_cols, style)
+
+  if return_json:
+    return jsonify({
+      "data": data,
+      "lastPage": None
+    })
+  else:
+    return data
+
+def reshape_data(rows, fields, field_to_cols=None, style="table"):
 
   # We may need to translate db columns --> field names.
   if field_to_cols is not None:
     cols_to_field = {v: k for k, v in field_to_cols.iteritems()}
   else:
-    cols_to_field = {v: v for v in db_cols}
+    cols_to_field = {v: v for v in fields}
 
-  # Figure out return format.
-  if return_format == "table" or (return_format is None and (format_str is None or format_str == "")):
-    data = OrderedDict()
+  if style=="objects":
+    data = rows_to_objects(rows, fields, cols_to_field) 
+  else: #assume style = "table"
+    data = rows_to_arrays(rows, fields, cols_to_field)
 
-    for i, row in enumerate(cur):
-      for col in fields:
-        # Some of the database column names don't match field names.
-        field = cols_to_field.get(col,col)
+  return data 
 
-        val = row[col]
-        if isinstance(val,dict):
-          for k, v in val.iteritems():
-            if k not in data:
-              data[k] = [None] * i
 
+def rows_to_arrays(cur, fields, cols_to_field):
+  data = OrderedDict()
+  for i, row in enumerate(cur):
+    for col in fields:
+      # Some of the database column names don't match field names.
+      field = cols_to_field.get(col, col)
+      val = row[col]
+      if isinstance(val, dict):
+        for k, v in val.iteritems():
+          if k not in data:
+            data[k] = [None] * i
             data[k].append(v)
-        else:
-          data.setdefault(field,[]).append(row[col])
+      else:
+        data.setdefault(field,[]).append(row[col])
+  return data
 
-    outer["data"] = data
-
-  elif return_format == "objects" or format_str == "objects":
+def rows_to_objects(cur, fields, cols_to_field):
     data = []
     for row in cur:
       rowdict = dict(row)
@@ -246,17 +255,12 @@ def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_for
       # User may have requested only certain fields
       for col in fields:
         # Translate from database column to field name
-        field = cols_to_field.get(col,col)
+        field = cols_to_field.get(col, col)
         finaldict[field] = rowdict[col]
 
       data.append(finaldict)
-
-    outer["data"] = data
-
-  if return_json:
-    return jsonify(outer)
-  else:
     return data
+    
 
 @app.route(
   "/v{}/annotation/recomb/".format(app.config["API_VERSION"]),
@@ -269,6 +273,7 @@ def recomb():
 
   return std_response(db_table,db_cols)
 
+  
 @app.route(
   "/v{}/annotation/recomb/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
@@ -276,9 +281,43 @@ def recomb():
 def recomb_results():
   # Database columns and table
   db_table = "rest.recomb_results"
-  db_cols = ["id","chromosome","position","recomb_rate","pos_cm"]
+  db_cols = ["id", "chromosome", "position", "recomb_rate", "pos_cm"]
 
-  return std_response(db_table,db_cols)
+  filter_str = request.args.get("filter")
+  fp = FilterParser()
+  matches = fp.parse(filter_str)
+  lrm = fp.left_middle_right(matches)
+
+  sql_complier = SQLCompiler()
+  def fetch(terms, limit=None):
+    sql, params = sql_complier.to_sql_parsed(terms, db_table, db_cols, limit=limit)
+    rows = g.db.execute(text(sql),params).fetchall()
+    return rows
+  
+  def interp(at, left, right):
+    if left is None or right is None:
+        return None
+    left_at = left["position"]
+    right_at = right["position"]
+    left_r = left["recomb_rate"]
+    right_r = right["recomb_rate"]
+    result = dict(left)
+    result["recom_rate"] = left_r + (at-left_at)/(right_at-left_at) * (right_r-left_r)
+    result["position"] = at
+    return result
+
+  left = fetch(lrm["left"], 1)
+  right =  fetch(lrm["right"], 1)
+  middle = fetch(lrm["middle"])
+  
+  left_end = interp(lrm["range"]["left"], left[0], middle[0])
+  right_end = interp(lrm["range"]["right"], middle[-1], right[0])
+
+  data = reshape_data([left_end] + middle + [right_end], db_cols)
+  return jsonify({
+    "data": data,
+    "lastPage": None
+  })
 
 @app.route(
   "/v{}/annotation/intervals/".format(app.config["API_VERSION"]),
