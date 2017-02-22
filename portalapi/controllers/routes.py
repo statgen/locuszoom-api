@@ -244,6 +244,10 @@ def rows_to_arrays(cur, fields, cols_to_field):
             data[k].append(v)
       else:
         data.setdefault(field,[]).append(row[col])
+  if not data:
+    #No data was found so fill with empty arrays
+    for col in fields:
+      data[col] = []
   return data
 
 def rows_to_objects(cur, fields, cols_to_field):
