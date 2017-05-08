@@ -12,7 +12,7 @@ if mode is None:
   raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
 
 # Config file given mode
-config_file = "../etc/config-{}.py".format(mode)
+config_file = os.path.join(app.root_path,"../etc/config-{}.py".format(mode))
 if not os.path.isfile(config_file):
   raise IOError("Could not find configuration file {} for API mode {}".format(config_file,mode))
 
