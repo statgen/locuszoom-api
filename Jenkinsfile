@@ -26,7 +26,10 @@ pipeline {
     stage('start-server') {
       steps {
         sh 'bin/unused_port.py > FLASK_PORT'
-        sh 'testenv/bin/python bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" & echo $! > PID'
+        sh '''
+          source testenv/bin/activate
+          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" & echo $! > PID
+        '''
       }
     }
     stage('test') {
