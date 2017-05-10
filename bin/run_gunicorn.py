@@ -10,8 +10,8 @@ def parse_args():
   from argparse import ArgumentParser
   p = ArgumentParser()
   p.add_argument("mode")
-  p.add_argument("--port",type="int")
-  p.add_argument("--host",type="str")
+  p.add_argument("--port",type=int)
+  p.add_argument("--host",type=str)
   return p.parse_args()
 
 def bash(cmd):
