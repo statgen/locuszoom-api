@@ -10,17 +10,14 @@ app = Flask(__name__)
 mode = os.environ.get("PORTALAPI_MODE")
 if mode is None:
   raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
-elif mode == "dev":
-  print "Starting with development config..."
-  app.config.from_pyfile("../etc/config-dev.py")
-elif mode == "prod":
-  print "Starting with production config..."
-  app.config.from_pyfile("../etc/config-prod.py")
-elif mode == "quick":
-  print "Starting with quick config..."
-  app.config.from_pyfile("../etc/config-quick.py")
-else:
-  raise Exception("Unrecognized value for PORTALAPI_MODE: " + mode)
+
+# Config file given mode
+config_file = os.path.join(app.root_path,"../etc/config-{}.py".format(mode))
+if not os.path.isfile(config_file):
+  raise IOError("Could not find configuration file {} for API mode {}".format(config_file,mode))
+
+# Load config
+app.config.from_pyfile(config_file)
 
 # Enable cross-domain headers on all routes
 CORS(app)
