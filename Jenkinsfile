@@ -31,7 +31,10 @@ pipeline {
     }
     stage('test') {
       steps {
-        sh 'FLASK_PORT=`cat FLASK_PORT` testenv/bin/pytest --pyargs portalapi --junitxml report.xml'
+        sh '''
+          export FLASK_PORT=`cat FLASK_PORT`
+          testenv/bin/pytest --pyargs portalapi --junitxml report.xml
+        '''
         junit 'report.xml'
       }
     }
