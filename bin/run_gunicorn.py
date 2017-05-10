@@ -10,6 +10,8 @@ def parse_args():
   from argparse import ArgumentParser
   p = ArgumentParser()
   p.add_argument("mode")
+  p.add_argument("--port",type="int")
+  p.add_argument("--host",type="str")
   return p.parse_args()
 
 def bash(cmd):
@@ -34,6 +36,14 @@ if __name__ == "__main__":
   # Load settings for this server mode
   # Importantly, FLASK_HOST and FLASK_PORT
   import_settings("etc/config-{}.py".format(mode))
+
+  # Did we have a host/port specified on the command line, by jenkins maybe?
+  # This will override what was given in the config file
+  if args.port is not None:
+    FLASK_PORT = args.port
+
+  if args.host is not None:
+    FLASK_HOST = args.host
 
   # Make directory for log files, if it doesn't exist
   bash("mkdir -p logs")
