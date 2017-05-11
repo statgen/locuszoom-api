@@ -314,8 +314,13 @@ def recomb_results():
   right =  fetch(lrm["right"], 1)
   middle = fetch(lrm["middle"])
   
-  left_end = interp(lrm["range"]["left"], left[0], middle[0])
-  right_end = interp(lrm["range"]["right"], middle[-1], right[0])
+  if len(middle)>0:
+    left_end = interp(lrm["range"]["left"], left[0], middle[0])
+    right_end = interp(lrm["range"]["right"], middle[-1], right[0])
+  else:
+    left_end = interp(lrm["range"]["left"], left[0], right[0])
+    right_end = interp(lrm["range"]["right"], left[0], right[0])
+
 
   data = reshape_data([left_end] + middle + [right_end], db_cols)
   return jsonify({
