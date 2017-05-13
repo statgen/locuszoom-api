@@ -11,7 +11,6 @@ pipeline {
         sh 'rm -rf testenv'
         sh 'rm -f report.xml'
         sh 'rm -f FLASK_PORT'
-        sh 'rm -f PID'
         sh '/data/redis/bin/redis-cli -n 3 flushdb'
       }
     }
@@ -28,7 +27,7 @@ pipeline {
         sh 'bin/unused_port.py > FLASK_PORT'
         sh '''
           source testenv/bin/activate
-          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" & echo $! > PID
+          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" &
         '''
       }
     }
@@ -54,7 +53,7 @@ pipeline {
   }
   post {
     always {
-      sh '[[ -f "PID" ]] && kill `cat PID`'
+      sh 'testenv/bin/python bin/kill_server.py --port `cat FLASK_PORT` --kill'
     }
   }
 }
