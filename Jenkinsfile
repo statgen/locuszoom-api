@@ -38,7 +38,6 @@ pipeline {
           export FLASK_PORT=`cat FLASK_PORT`
           testenv/bin/pytest --pyargs portalapi --junitxml report.xml
         '''
-        junit 'report.xml'
       }
     }
     stage('deploy') {
@@ -54,6 +53,7 @@ pipeline {
   post {
     always {
       sh 'testenv/bin/python bin/kill_server.py --port `cat FLASK_PORT` --kill'
+      junit 'report.xml'
     }
   }
 }
