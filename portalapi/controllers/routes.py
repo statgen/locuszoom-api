@@ -313,6 +313,13 @@ def recomb_results():
   left = fetch(lrm["left"], 1)
   right =  fetch(lrm["right"], 1)
   middle = fetch(lrm["middle"])
+
+  if len(left)<1:
+    left = [{"id": "chrleft", "position": lrm["range"]["left"], 
+        "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
+  if len(right)<1:
+    right = [{"id": "chrright", "position": lrm["range"]["right"], 
+        "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
   
   if len(middle)>0:
     left_end = interp(lrm["range"]["left"], left[0], middle[0])
@@ -320,7 +327,6 @@ def recomb_results():
   else:
     left_end = interp(lrm["range"]["left"], left[0], right[0])
     right_end = interp(lrm["range"]["right"], left[0], right[0])
-
 
   data = reshape_data([left_end] + middle + [right_end], db_cols)
   return jsonify({
