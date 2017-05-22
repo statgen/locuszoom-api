@@ -54,7 +54,7 @@ if __name__ == "__main__":
   bash(
     """
 
-    gunicorn -k gevent -w {WORKERS} -b {host}:{port} portalapi:app \
+    gunicorn -k gevent -w {workers} -b {host}:{port} portalapi:app \
       --access-logfile logs/gunicorn.${{PORTALAPI_MODE}}.access.log \
       --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" [reqtime: %(L)ss] -- %(U)s -- %(q)s' \
       --error-logfile logs/gunicorn.${{PORTALAPI_MODE}}.error.log \
