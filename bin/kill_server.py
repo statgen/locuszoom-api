@@ -15,19 +15,33 @@ def find_server(port):
 def get_args():
   from argparse import ArgumentParser
   p = ArgumentParser()
-  p.add_argument("--port",help="Find the server running on the given port",required=True)
+  p.add_argument("--port",help="Find the server running on the given port",required=True,type=int)
   p.add_argument("--kill",help="Kill the server instead of just printing PID",default=False,action="store_true")
   return p.parse_args()
 
 if __name__ == "__main__":
-  args = get_args()
-  pid = find_server(args.port)
+  try:
+    args = get_args()
+    pid = find_server(args.port)
 
-  if pid is None:
-    raise Exception("Could not find a process attached to port {}".format(args.port))
+    if args.port <= 1024:
+      raise ValueError("Port must be greater than 1024")
+    elif args.port >= 65535:
+      raise ValueError("Port must be less than 65535")
 
-  if not args.kill:
-    print(find_server(args.port))
-  else:
-    os.kill(int(pid),signal.SIGTERM)
+    if pid is None:
+      print("Could not find a process attached to port {}".format(args.port),file=sys.stderr)
+      sys.exit(1)
+
+    if not args.kill:
+      print(find_server(args.port))
+    else:
+      os.kill(int(pid),signal.SIGTERM)
+  except SystemExit:
+    raise
+  except:
+    import traceback
+    print("An unhandled exception occurred while trying to kill server",file=sys.stderr)
+    traceback.print_exc()
+    sys.exit(2)
 
