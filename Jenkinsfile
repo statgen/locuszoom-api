@@ -5,6 +5,10 @@ pipeline {
     PATH = "/home/linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   }
 
+  /*
+    FLASK_PORT = port used by flask server used for running test cases
+  */
+
   stages {
     stage('preclean') {
       steps {
@@ -46,7 +50,7 @@ pipeline {
       }
 
       steps {
-        echo 'Deployment currently not implemented'
+        sh 'sudo -H -u lzapi /home/portaldev/lzapi_dev/bin/deploy_dev.py'
       }
     }
   }
