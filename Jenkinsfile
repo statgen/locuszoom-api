@@ -5,13 +5,16 @@ pipeline {
     PATH = "/home/linuxbrew/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   }
 
+  /*
+    FLASK_PORT = port used by flask server used for running test cases
+  */
+
   stages {
     stage('preclean') {
       steps {
         sh 'rm -rf testenv'
         sh 'rm -f report.xml'
         sh 'rm -f FLASK_PORT'
-        sh 'rm -f PID'
         sh '/data/redis/bin/redis-cli -n 3 flushdb'
       }
     }
@@ -28,7 +31,7 @@ pipeline {
         sh 'bin/unused_port.py > FLASK_PORT'
         sh '''
           source testenv/bin/activate
-          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" & echo $! > PID
+          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" &
         '''
       }
     }
@@ -39,7 +42,6 @@ pipeline {
           export FLASK_PORT=`cat FLASK_PORT`
           testenv/bin/pytest --pyargs portalapi --junitxml report.xml
         '''
-        junit 'report.xml'
       }
     }
     stage('deploy') {
@@ -48,13 +50,14 @@ pipeline {
       }
 
       steps {
-        echo 'Deployment currently not implemented'
+        sh 'sudo -H -u lzapi /home/portaldev/lzapi_dev/bin/deploy_dev.py'
       }
     }
   }
   post {
     always {
-      sh '[[ -f "PID" ]] && kill `cat PID`'
+      sh 'testenv/bin/python bin/kill_server.py --port `cat FLASK_PORT` --kill'
+      junit 'report.xml'
     }
   }
 }
