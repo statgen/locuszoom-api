@@ -11,11 +11,15 @@ from portalapi.cache import RedisIntervalCache
 from portalapi.search_tokenizer import SearchTokenizer
 from pyparsing import ParseException, ParseResults
 from six import iteritems
+from subprocess import check_output
 import requests
 import psycopg2
 import redis
 import traceback
 import gzip
+import time
+
+START_TIME = time.time()
 
 engine = create_engine(
   URL(**app.config["DATABASE"]),
@@ -265,6 +269,25 @@ def rows_to_objects(cur, fields, cols_to_field):
       data.append(finaldict)
     return data
     
+
+@app.route("/status",methods = ["GET"])
+def status():
+  info = dict()
+
+  # Current branch
+  info["branch"] = check_output("git symbolic-ref --short -q HEAD",shell=True).strip()
+
+  # Current commit
+  info["githash"] = check_output("git rev-parse HEAD",shell=True).strip()
+
+  # Uptime
+  minutes, seconds = divmod(time.time() - START_TIME,60)
+  hours, minutes = divmod(minutes,60)
+  days, hours = divmod(hours,24)
+  days, hours, minutes, seconds = map(int,(days,hours,minutes,round(seconds)))
+  info["uptime"] = "{}d:{}h:{}m:{}s".format(days,hours,minutes,seconds)
+
+  return jsonify(info)
 
 @app.route(
   "/v{}/annotation/recomb/".format(app.config["API_VERSION"]),
