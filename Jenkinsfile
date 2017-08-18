@@ -12,6 +12,7 @@ pipeline {
   stages {
     stage('preclean') {
       steps {
+        echo 'Modification by non-contributor!'
         sh 'rm -rf testenv'
         sh 'rm -f report.xml'
         sh 'rm -f FLASK_PORT'
