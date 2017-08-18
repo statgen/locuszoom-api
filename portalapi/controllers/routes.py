@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from cStringIO import StringIO as IO
 from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
@@ -6,9 +7,19 @@ from flask import g, jsonify, request
 from portalapi import app, cache
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
-from pyparsing import ParseException
+from portalapi.cache import RedisIntervalCache
+from portalapi.search_tokenizer import SearchTokenizer
+from pyparsing import ParseException, ParseResults
+from six import iteritems
+from subprocess import check_output
 import requests
 import psycopg2
+import redis
+import traceback
+import gzip
+import time
+
+START_TIME = time.time()
 
 engine = create_engine(
   URL(**app.config["DATABASE"]),
@@ -19,6 +30,12 @@ engine = create_engine(
   max_overflow = 0,
   isolation_level = "AUTOCOMMIT"
   # poolclass = NullPool
+)
+
+redis_client = redis.StrictRedis(
+  host = app.config["REDIS_HOST"],
+  port = app.config["REDIS_PORT"],
+  db = app.config["REDIS_DB"]
 )
 
 class FlaskException(Exception):
@@ -58,8 +75,14 @@ def before_request():
   db = getattr(g,"db",None)
   if db is None:
     db = engine.connect()
-
   g.db = db
+
+  # Hard coded for now - should look up from DB
+  build_id = getattr(g, "build_id", None)
+  if build_id is None:
+    build_id = {"grch37": {"db_snp": 9, "genes": 2},
+        "grch38": {"genes": 1}}
+    g.build_id = build_id
 
 @app.teardown_appcontext
 def close_db(*args):
@@ -67,7 +90,40 @@ def close_db(*args):
   if db is not None:
     db.close()
 
-def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_format=None):
+@app.after_request
+def zipper(response):
+  if not request.args.get("compress"):
+    return response
+
+  accept_encoding = request.headers.get('Accept-Encoding', '')
+
+  if 'gzip' not in accept_encoding.lower():
+    return response
+
+  response.direct_passthrough = False
+
+  if (response.status_code < 200 or
+    response.status_code >= 300 or
+    'Content-Encoding' in response.headers):
+    return response
+
+  gzip_buffer = IO()
+  gzip_file = gzip.GzipFile(mode='wb',fileobj=gzip_buffer)
+  gzip_file.write(response.data)
+  gzip_file.close()
+
+  response.data = gzip_buffer.getvalue()
+  response.headers['Content-Encoding'] = 'gzip'
+  response.headers['Vary'] = 'Accept-Encoding'
+  response.headers['Content-Length'] = len(response.data)
+
+  return response
+
+class JSONFloat(float):
+  def __repr__(self):
+    return "%0.2g" % self
+
+def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None):
   """
   Standard API response for simple cases of executing a filter against a single
   database table.
@@ -141,51 +197,64 @@ def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_for
   else:
     sort_fields = None
 
-  # if filter_str is not None:
-  #   sql, params = fparser.parse_into_sql(filter_str,db_table,db_cols,fields,sort_fields)
-  # else:
-  #   sql = "SELECT * FROM {}".format(db_table)
-  #   params = []
-
-  sql, params = sql_compiler.to_sql(filter_str,db_table,db_cols,fields,sort_fields,field_to_cols)
+  sql, params = sql_compiler.to_sql(filter_str, db_table, db_cols, fields, sort_fields, field_to_cols)
 
   # text() is sqlalchemy helper object when specifying SQL as plain text string
   # allows for bind parameters to be used
   cur = g.db.execute(text(sql),params)
 
-  outer = {
-    "data": None,
-    "lastPage": None
-  }
+  if return_format == "table" or (return_format is None and (format_str is None or format_str == "")):
+    style = "table"
+  elif return_format == "objects" or format_str == "objects":
+    style = "objects"
+
+  data = reshape_data(cur, fields, field_to_cols, style)
+
+  if return_json:
+    return jsonify({
+      "data": data,
+      "lastPage": None
+    })
+  else:
+    return data
+
+def reshape_data(rows, fields, field_to_cols=None, style="table"):
 
   # We may need to translate db columns --> field names.
   if field_to_cols is not None:
     cols_to_field = {v: k for k, v in field_to_cols.iteritems()}
   else:
-    cols_to_field = {v: v for v in db_cols}
+    cols_to_field = {v: v for v in fields}
 
-  # Figure out return format.
-  if return_format == "table" or (return_format is None and (format_str is None or format_str == "")):
-    data = OrderedDict()
+  if style=="objects":
+    data = rows_to_objects(rows, fields, cols_to_field) 
+  else: #assume style = "table"
+    data = rows_to_arrays(rows, fields, cols_to_field)
 
-    for i, row in enumerate(cur):
-      for col in fields:
-        # Some of the database column names don't match field names.
-        field = cols_to_field.get(col,col)
+  return data 
 
-        val = row[col]
-        if isinstance(val,dict):
-          for k, v in val.iteritems():
-            if k not in data:
-              data[k] = [None] * i
 
+def rows_to_arrays(cur, fields, cols_to_field):
+  data = OrderedDict()
+  for i, row in enumerate(cur):
+    for col in fields:
+      # Some of the database column names don't match field names.
+      field = cols_to_field.get(col, col)
+      val = row[col]
+      if isinstance(val, dict):
+        for k, v in val.iteritems():
+          if k not in data:
+            data[k] = [None] * i
             data[k].append(v)
-        else:
-          data.setdefault(field,[]).append(row[col])
+      else:
+        data.setdefault(field,[]).append(row[col])
+  if not data:
+    #No data was found so fill with empty arrays
+    for col in fields:
+      data[col] = []
+  return data
 
-    outer["data"] = data
-
-  elif return_format == "objects" or format_str == "objects":
+def rows_to_objects(cur, fields, cols_to_field):
     data = []
     for row in cur:
       rowdict = dict(row)
@@ -194,17 +263,31 @@ def std_response(db_table,db_cols,field_to_cols=None,return_json=True,return_for
       # User may have requested only certain fields
       for col in fields:
         # Translate from database column to field name
-        field = cols_to_field.get(col,col)
+        field = cols_to_field.get(col, col)
         finaldict[field] = rowdict[col]
 
       data.append(finaldict)
-
-    outer["data"] = data
-
-  if return_json:
-    return jsonify(outer)
-  else:
     return data
+    
+
+@app.route("/status",methods = ["GET"])
+def status():
+  info = dict()
+
+  # Current branch
+  info["branch"] = check_output("git symbolic-ref --short -q HEAD",shell=True).strip()
+
+  # Current commit
+  info["githash"] = check_output("git rev-parse HEAD",shell=True).strip()
+
+  # Uptime
+  minutes, seconds = divmod(time.time() - START_TIME,60)
+  hours, minutes = divmod(minutes,60)
+  days, hours = divmod(hours,24)
+  days, hours, minutes, seconds = map(int,(days,hours,minutes,round(seconds)))
+  info["uptime"] = "{}d:{}h:{}m:{}s".format(days,hours,minutes,seconds)
+
+  return jsonify(info)
 
 @app.route(
   "/v{}/annotation/recomb/".format(app.config["API_VERSION"]),
@@ -217,6 +300,7 @@ def recomb():
 
   return std_response(db_table,db_cols)
 
+  
 @app.route(
   "/v{}/annotation/recomb/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
@@ -224,9 +308,54 @@ def recomb():
 def recomb_results():
   # Database columns and table
   db_table = "rest.recomb_results"
-  db_cols = ["id","chromosome","position","recomb_rate","pos_cm"]
+  db_cols = ["id", "chromosome", "position", "recomb_rate", "pos_cm"]
 
-  return std_response(db_table,db_cols)
+  filter_str = request.args.get("filter")
+  fp = FilterParser()
+  matches = fp.parse(filter_str)
+  lrm = fp.left_middle_right(matches)
+
+  sql_complier = SQLCompiler()
+  def fetch(terms, limit=None):
+    sql, params = sql_complier.to_sql_parsed(terms, db_table, db_cols, limit=limit)
+    rows = g.db.execute(text(sql),params).fetchall()
+    return rows
+  
+  def interp(at, left, right):
+    if left is None or right is None:
+        return None
+    left_at = left["position"]
+    right_at = right["position"]
+    left_r = left["recomb_rate"]
+    right_r = right["recomb_rate"]
+    result = dict(left)
+    result["recom_rate"] = left_r + (at-left_at)/(right_at-left_at) * (right_r-left_r)
+    result["position"] = at
+    return result
+
+  left = fetch(lrm["left"], 1)
+  right =  fetch(lrm["right"], 1)
+  middle = fetch(lrm["middle"])
+
+  if len(left)<1:
+    left = [{"id": "chrleft", "position": lrm["range"]["left"], 
+        "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
+  if len(right)<1:
+    right = [{"id": "chrright", "position": lrm["range"]["right"], 
+        "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
+  
+  if len(middle)>0:
+    left_end = interp(lrm["range"]["left"], left[0], middle[0])
+    right_end = interp(lrm["range"]["right"], middle[-1], right[0])
+  else:
+    left_end = interp(lrm["range"]["left"], left[0], right[0])
+    right_end = interp(lrm["range"]["right"], left[0], right[0])
+
+  data = reshape_data([left_end] + middle + [right_end], db_cols)
+  return jsonify({
+    "data": data,
+    "lastPage": None
+  })
 
 @app.route(
   "/v{}/annotation/intervals/".format(app.config["API_VERSION"]),
@@ -284,22 +413,16 @@ def single_results():
 
   return std_response(db_table,db_cols,field_to_col)
 
-def make_cache_key(*args,**kwargs):
-  return request.url
-
 @app.route(
   "/v{}/statistic/pair/LD/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
-@cache.cached(key_prefix=make_cache_key)
 def ld_results():
-  print "Cache miss, calculating LD for request: {}".format(request.url)
-
   # GET request parameters
   filter_str = request.args.get("filter")
-  fields_str = request.args.get("fields")
-  sort_str = request.args.get("sort")
-  format_str = request.args.get("format")
+  #fields_str = request.args.get("fields")
+  #sort_str = request.args.get("sort")
+  #format_str = request.args.get("format")
 
   if filter_str is None:
     raise FlaskException("No filter string specified",400)
@@ -308,20 +431,40 @@ def ld_results():
   #base_url = "http://localhost:8888/api_ld/ld?"
   base_url = "http://portaldev.sph.umich.edu/api_ld/ld?"
   trans = LDAPITranslator()
-  param_str = trans.to_refsnp_url(filter_str)
+  param_str, param_dict = trans.to_refsnp_url(filter_str)
   final_url = base_url + param_str
 
-  # Fire off the request to the LD server.
+  # Cache
+  ld_cache = RedisIntervalCache(redis_client)
+
+  # Cache key for this particular request.
+  # Note that in Daniel's API, for now, "reference" is implicitly
+  # attached to build, reference panel, and population all at the same time.
+  # In the future, it will hopefully expand to accepting paramters for all 3, and
+  # then we can include this in the cache key.
+  refvariant = param_dict["variant1"]["eq"][0]
+  reference = param_dict["reference"]["eq"][0]
+  refpos = int(refvariant.split("_")[0].split(":")[1])
+
+  cache_key = "{reference}__{refvariant}".format(
+    reference = reference,
+    refvariant = refvariant
+  )
+
   try:
-    resp = requests.get(final_url)
-  except Exception as e:
-    raise FlaskException("Failed retrieving data from LD server, error was {}".format(e.message),500)
+    start = int(param_dict["position2"]["ge"][0])
+    end = int(param_dict["position2"]["le"][0])
+  except:
+    raise FlaskException("position2 compared to non-integer",400)
 
-  # Did it come back OK?
-  if not resp.ok:
-    raise FlaskException("Failed retrieving data from LD server, error was {}".format(resp.reason),500)
+  chromosome = param_dict["chromosome2"]["eq"][0]
+  rlength = abs(end - start)
 
-  ld_json = resp.json()
+  # Is the region larger than we're willing to calculate?
+  max_flank = app.config["LD_MAX_FLANK"]
+  if abs(refpos - start) > max_flank or abs(refpos - end) > max_flank:
+    raise FlaskException("Distance requested from refsnp for LD calculation too far",413)
+
   outer = {
     "data": None,
     "lastPage": None
@@ -334,15 +477,79 @@ def ld_results():
     "variant2": []
   }
 
-  for obj in ld_json["pairs"]:
-    data["chromosome2"].append(ld_json["chromosome"])
-    data["position2"].append(obj["position2"])
-    data["rsquare"].append(obj["rsquare"])
-    data["variant2"].append(obj["name2"])
-
   outer["data"] = data
 
-  return jsonify(outer)
+  # Do we need to compute, or is the cache sufficient?
+  try:
+    cache_data = ld_cache.retrieve(cache_key,start,end)
+  except:
+    print "Warning: cache retrieval failed, traceback was: "
+    traceback.print_exc()
+    cache_data = None
+
+  if cache_data is None:
+    # Need to compute. Either the range given is larger than we've previously computed,
+    # or redis is down.
+    print "Cache miss for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), recalculating".format(
+      reference=reference,
+      refvariant=refvariant,
+      start=start,
+      end=end,
+      rlength=rlength/1000
+    )
+
+    # Fire off the request to the LD server.
+    try:
+      resp = requests.get(final_url)
+    except Exception as e:
+      raise FlaskException("Failed retrieving data from LD server, error was {}".format(e.message),500)
+
+    # Did it come back OK?
+    if not resp.ok:
+      raise FlaskException("Failed retrieving data from LD server, error was {}".format(resp.reason),500)
+
+    # Get JSON
+    ld_json = resp.json()
+
+    # Store in format needed for API response
+    for obj in ld_json["pairs"]:
+      data["chromosome2"].append(ld_json["chromosome"])
+      data["position2"].append(obj["position2"])
+      data["rsquare"].append(JSONFloat(obj["rsquare"]))
+      data["variant2"].append(obj["name2"])
+
+    # Store data to cache
+    keep = ("name2","rsquare")
+    for_cache = dict(zip(
+      (x["position2"] for x in ld_json["pairs"]),
+      (dict((x,d[x]) for x in keep) for d in ld_json["pairs"])
+    ))
+
+    try:
+      ld_cache.store(cache_key,start,end,for_cache)
+    except:
+      print "Warning: storing data in cache failed, traceback was: "
+      traceback.print_exc()
+
+  else:
+    print "Cache *match* for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), using cached data".format(
+      reference=reference,
+      refvariant=refvariant,
+      start=start,
+      end=end,
+      rlength=rlength/1000
+    )
+
+    # We can just use the cache's data directly.
+    for position, ld_pair in iteritems(cache_data):
+      data["chromosome2"].append(chromosome)
+      data["position2"].append(position)
+      data["rsquare"].append(JSONFloat(ld_pair["rsquare"]))
+      data["variant2"].append(ld_pair["name2"])
+
+  final_resp = jsonify(outer)
+
+  return final_resp
 
 @app.route(
   "/v{}/annotation/genes/".format(app.config["API_VERSION"]),
@@ -454,3 +661,137 @@ def genes():
   }
 
   return jsonify(outer)
+
+
+@app.route(
+  "/v{}/annotation/omnisearch/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def omnisearch():
+    """
+    This function is meant to take a generic search term and return
+    a genomic position
+
+    We will support the following search types
+    * chr:position
+    * chr:start-stop
+    * chr:position+offset (-> chr:position-offset - chr:position+offset)
+    * rs00001
+    * rs00001+offset
+    * gene symbol names
+    * transcript names
+
+    Positions and offsets may have commas and use K and M suffixes
+    """
+
+    def gene_lookup_base(x, filter_str, build):
+        build_id = g.build_id.get(build, {}).get("genes", None)
+        if build_id is None:
+            x["error"] = "Genes not available for build"
+            return x
+        filter_str = " and ".join([f for f in [filter_str, "source_id eq {}".format(build_id)] if len(f)>0])
+        sql_complier = SQLCompiler()
+        fields = ["source_id", "chromosome", "gene_name", "gene_id", "interval_start", "interval_end"]
+        db_table = "rest.genes"
+        sort_fields = ["chromosome","interval_start"]
+        db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
+        sql, params = sql_complier.to_sql(filter_str, db_table, db_cols, fields, sort_fields, None)
+        cur = g.db.execute(text(sql), params)
+        results = cur.fetchmany(2)
+        if len(results)==1:
+            row = results[0]
+            x["chrom"] = row["chromosome"]
+            x["start"] = row["interval_start"] - x.get("offset", 0)
+            x["end"] = row["interval_end"] + x.get("offset", 0)
+            x["gene_name"] = row["gene_name"]
+            x["gene_id"] = row["gene_id"]
+            del x["q"]
+            del x["offset"]
+            return x
+        elif len(results)==0:
+            x["error"] = "Gene not found"
+            return x
+        elif len(results)>1:
+            x["error"] = "Gene name not unique"
+            return x
+
+    def gene_name_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "gene_name eq '{}'".format(term.upper()) 
+        return gene_lookup_base(x, filter_str, build)
+
+    def gene_id_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "gene_id like '{}%'".format(term.upper()) 
+        return gene_lookup_base(x, filter_str, build)
+  
+    def rs_lookup(x, build):
+        term = x.get("q",None)
+        if term is None:
+            return x
+        build_id = g.build_id.get(build, {}).get("db_snp", None)
+        if build_id is None:
+            x["error"] = "SNP positions not available for build"
+            return x
+        sql_complier = SQLCompiler()
+        filter_str = "id eq {} and rsid eq '{}'".format(build_id, term.lower()) 
+        fields = ["chrom", "pos"]
+        db_table = "rest.dbsnp_snps"
+        sort_fields = ["chrom","pos"]
+        db_cols = "id rsid chrom pos ref alt".split()
+        sql, params = sql_complier.to_sql(filter_str, db_table, db_cols, fields, sort_fields, None)
+        cur = g.db.execute(text(sql), params)
+        results = cur.fetchmany(2)
+        if len(results)==1:
+            row = results[0]
+            x["chrom"] = row["chrom"]
+            x["start"] = row["pos"] - x.get("offset", 0)
+            x["end"] = row["pos"] + x.get("offset", 0)
+            del x["q"]
+            del x["offset"]
+            return x
+        elif len(results)==0:
+            x["error"] = "SNP not found"
+            return x
+        elif len(results)>1:
+            x["error"] = "SNP not unique"
+            return x
+
+    term_arg = request.args.get("q")
+    build_arg = request.args.get("build")
+
+    if term_arg is None or build_arg is None:
+        resp = jsonify({"error": "Missing 1 or more required parameters: q, build"})
+        resp.status_code = 422
+        return resp
+
+    if build_arg.lower() not in g.build_id:
+        resp = jsonify({"error": "Unrecognized build (" + build_arg + "), known: " + ", ".join(g.build_id.keys())})
+        resp.status_code = 422
+        return resp
+    build = build_arg.lower()
+
+    st = SearchTokenizer(term_arg)
+    results = []
+    for x in st.get_terms():
+        if "type" not in x:
+            results.append(x)
+        elif x["type"] == "region":
+            results.append(x)
+        elif x["type"] == "rs":
+            results.append(rs_lookup(x, build))
+        elif x["type"] == "egene":
+            results.append(gene_id_lookup(x, build))
+        elif x["type"] == "other":
+            results.append(gene_name_lookup(x, build))
+        else:
+            x["error"] = "Cannot look up position"
+            results.append(x)
+
+    return jsonify({"build": build, "data": results})

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas
+from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas, ParseResults
 from collections import namedtuple
 
 class InvalidFieldException(Exception):
@@ -11,16 +11,22 @@ class InvalidOperatorException(Exception):
 class InvalidValueException(Exception):
   pass
 
+def parse_add(*args, **kwargs):
+    op = kwargs.get("op", "and")
+    x = args[0]
+    for y in args[1:]:
+        x = x + ParseResults(op) + y
+    return ParseResults(x)
+
+def parse_join(x, op="and"):
+    result = [op] * (len(x) * 2 - 1)
+    result[0::2] = x
+    return ParseResults(result)
+
+
 class FilterParser(object):
   def __init__(self):
     self.__grammar()
-
-  # def _convert_rhs(self,rhs):
-  #   rhs = list(rhs)
-  #   if len(rhs) > 1:
-  #     return rhs
-  #   else:
-  #     return rhs[0]
 
   def __grammar(self):
     """
@@ -40,11 +46,16 @@ class FilterParser(object):
 
     stmt = Group(
       lhs + comp + rhs
-    )
+    ).setResultsName("statement")
 
     expr = stmt + ZeroOrMore(op + stmt)
 
     self.grammar = expr
+
+  def StatementLiteral(self, lhs, comp, rhs):
+    return ParseResults(lhs, "lhs", False)  + \
+        ParseResults(comp, "comp", False) + \
+        ParseResults([rhs], "rhs", True)
 
   def parse(self,query):
     matches = self.grammar.parseString(query)
@@ -106,6 +117,65 @@ class FilterParser(object):
 
     return params
 
+  def find_genome_range(self, x):
+    """Find chr,start,stop from a parsed filter"""
+    chrom = None
+    left = None
+    open_left = False
+    right = None
+    open_right = False
+    uncaught =  []
+    for m in x:
+      if isinstance(m, basestring):
+        if m == "and":
+          continue
+        else:
+          raise Exception("Unable to handle '{}' conjunction".format(m))
+      field = m[0]
+      op = m[1]
+      val = m[2]
+      if field == "chromosome":
+        if op == "eq":
+          chrom = val
+        else:
+          raise Exception("Unable to parse operator '{}' for chrom".format(op))
+      elif field == "position":
+        if op == "gt" or op == "ge" or op==">":
+          left = val
+          open_left = op != "ge" 
+        elif op == "lt" or op =="le" or op=="<":
+          right = val
+          open_right = op != "le" 
+        elif op == "eq":
+          left = val
+          right = val
+        else:
+          raise Exception("Unable to parse operator '{}' for position".format(op))
+      else:
+          uncaught.append(m)
+    resp= {"chrom": chrom, "left": left, "right": right,
+      "open_left": open_left, "open_right": open_right}
+    if chrom is None or left is None or right is None:
+      raise Exception("Unable to find bounded range")
+    return resp, parse_join(uncaught)
+
+  def left_middle_right(self, matches):
+    """return filters for left, middle and right of genomic range"""
+    genome_range, other_filter = self.find_genome_range(matches)
+
+    chrom = self.StatementLiteral("chromosome", "eq", genome_range["chrom"])
+    ex_left = self.StatementLiteral("position", "le", genome_range["left"])
+    ex_right = self.StatementLiteral("position", "ge", genome_range["right"])
+
+    left_filter = parse_add(parse_join([chrom, ex_left]), other_filter)
+    right_filter = parse_add(parse_join([chrom, ex_right]), other_filter)
+
+    in_left = self.StatementLiteral("position", "ge", genome_range["left"])
+    in_right = self.StatementLiteral("position", "lt", genome_range["right"])
+    middle_filter = parse_add(parse_join([chrom, in_right, in_left]), other_filter)
+    return {"left": left_filter, "right": right_filter, "middle": middle_filter, \
+      "range": genome_range}
+
   @staticmethod
   def _tests():
     grammar_tests = [
@@ -157,6 +227,8 @@ class LDAPITranslator(object):
 
     Returns:
       string: URL constructed from the filter string
+      dict: field -> [(operator,value)]
+        List is necessary because a field can be specified multiple times, e.g. position2 le 10 and position2 ge 1
     """
 
     # filter: reference eq 1 and chromosome2 eq '9' and position2 ge 16961 and position2 le 16967 and variant1 eq '9:16918_G/C'
@@ -198,6 +270,7 @@ class LDAPITranslator(object):
       matches = []
 
     url = []
+    parsed = {}
     for match in matches:
       if isinstance(match,str):
         if match == 'and':
@@ -220,6 +293,9 @@ class LDAPITranslator(object):
 
         v_rhs = rhs[0]
         v_lhs = match.lhs
+
+        # Need to store for return, but we need the values before translation to the LD API.
+        parsed.setdefault(v_lhs,{}).setdefault(match.comp,[]).append(v_rhs)
 
         # Handle reference. The LD server expects "ALL" or "EUR", we receive 1, 2, etc.
         if v_lhs == "reference":
@@ -247,13 +323,90 @@ class LDAPITranslator(object):
 
         url.append("{}={}".format(v_lhs,v_rhs))
 
-    return "&".join(url)
+    return "&".join(url), parsed
 
 class SQLCompiler(object):
   def __init__(self):
     self.filter_parser = FilterParser()
+    self.ops = {
+      "gt": ">",
+      "ge": ">=",
+      "le": "<=",
+      "lt": "<",
+      "eq": "=",
+      "not": "<>",
+      "in": "IN",
+      "=": "=",
+      ">": ">",
+      "<": "<",
+      'like': 'like'
+    }
+    # If these appear in the SQL string, they need to be quoted.
+    self.sql_keywords = [
+      "end"
+    ]
 
-  def to_sql(self,query,table,acceptable_fields,columns=None,sort_columns=None,field_to_col=None):
+  def quote_keywords(self, x):
+    if x in self.sql_keywords:
+      return '"{}"'.format(x)
+    else:
+      return x
+
+  def _to_where(self, terms, acceptable_fields, field_to_col=None):
+    where = []
+    params = {}
+    pcount = 1
+
+    if terms is None or len(terms)<1:
+      return where, params
+
+    where.append("WHERE")
+
+    for term in terms:
+      if isinstance(term,str):
+        if term == 'and':
+          where.append("AND")
+        elif term == 'or':
+          where.append("OR")
+      else:
+        lhs = field_to_col.get(term.lhs,term.lhs) if field_to_col is not None else term.lhs
+        if lhs not in acceptable_fields:
+          raise InvalidFieldException, "Invalid field in query string: {}".format(term.lhs)
+
+        where.append(self.quote_keywords(lhs))
+
+        sql_comp = self.ops.get(term.comp)
+        if sql_comp is None:
+          raise InvalidOperatorException, "Invalid operator in query string: {}".format(term.comp)
+        where.append(sql_comp)
+
+        if term.comp == "in":
+          rhs = list(term.rhs)
+        else:
+          rhs = list(term.rhs)[0]
+
+        if term.comp == "like":
+          rhs = rhs.replace("*","%")
+
+        mparam = "p{}".format(pcount)
+        if isinstance(rhs,list):
+          params[mparam] = tuple(rhs)
+          where.append(":{}".format(mparam))
+        else:
+          params[mparam] = rhs
+          where.append(":{}".format(mparam))
+
+        pcount += 1
+    return where, params
+
+  def to_sql(self, query, table, acceptable_fields, columns=None, sort_columns=None, field_to_col=None, limit=None):
+    if query is not None:
+      terms = self.filter_parser.grammar.parseString(query)
+    else:
+      terms = []
+    return self.to_sql_parsed(terms, table, acceptable_fields, columns, sort_columns, field_to_col, limit)
+
+  def to_sql_parsed(self, terms, table, acceptable_fields, columns=None, sort_columns=None, field_to_col=None, limit=None):
     """
     Convert an API query string into a SQL statement.
 
@@ -265,7 +418,7 @@ class SQLCompiler(object):
     Otherwise, you will probably get SQL injected.
 
     Args:
-      query: the filter string as submitted via API request
+      terms: the parsed filter string submitted via API request
       table: name of the table to filter against. You are assumed to have come up with
         the table name yourself, and not from user input.
       acceptable_fields: only permit queries against these field names (not optional)
@@ -281,96 +434,22 @@ class SQLCompiler(object):
         SQL string. You must use the DBAPI (sqlalchemy) to do it (or, broken record, you'll get SQL injected.)
     """
 
-    # def sql_quote(x):
-    #   if isinstance(x,str):
-    #     return "'{}'".format(x)
-    #   else:
-    #     return str(x)
-
-    ops = {
-      "gt": ">",
-      "ge": ">=",
-      "le": "<=",
-      "lt": "<",
-      "eq": "=",
-      "not": "<>",
-      "in": "IN",
-      "=": "=",
-      ">": ">",
-      "<": "<",
-      'like': 'like'
-    }
-
-    # If these appear in the SQL string, they need to be quoted.
-    sql_keywords = [
-      "end"
-    ]
-
-    def quote_keywords(x):
-      if x in sql_keywords:
-        return '"{}"'.format(x)
-      else:
-        return x
-
     sql = [
       "SELECT {} FROM {}".format(
-        "*" if columns is None else ",".join(map(quote_keywords,columns)),
+        "*" if columns is None else ",".join(map(self.quote_keywords,columns)),
         table
       )
     ]
 
-    if query is not None:
-      matches = self.filter_parser.grammar.parseString(query)
-    else:
-      matches = []
-
-    params = {}
-    pcount = 1
-
-    if len(matches) > 0:
-      sql.append("WHERE")
-
-    for match in matches:
-      if isinstance(match,str):
-        if match == 'and':
-          sql.append("AND")
-        elif match == 'or':
-          sql.append("OR")
-      else:
-        lhs = field_to_col.get(match.lhs,match.lhs) if field_to_col is not None else match.lhs
-        if lhs not in acceptable_fields:
-          raise InvalidFieldException, "Invalid field in query string: {}".format(match.lhs)
-
-        sql.append(quote_keywords(lhs))
-
-        sql_comp = ops.get(match.comp)
-        if sql_comp is None:
-          raise InvalidOperatorException, "Invalid operator in query string: {}".format(match.comp)
-
-        sql.append(ops.get(match.comp))
-
-        if match.comp == "in":
-          rhs = list(match.rhs)
-        else:
-          rhs = list(match.rhs)[0]
-
-        if match.comp == "like":
-          rhs = rhs.replace("*","%")
-
-        mparam = "p{}".format(pcount)
-        if isinstance(rhs,list):
-          params[mparam] = tuple(rhs)
-          sql.append(":{}".format(mparam))
-          #sql.append("({})".format(",".join(map(sql_quote,rhs))))
-        else:
-          params[mparam] = rhs
-          sql.append(":{}".format(mparam))
-          #sql.append(str(rhs))
-
-        pcount += 1
+    where, params = self._to_where(terms, acceptable_fields, field_to_col)
+    if len(where)>0:
+      sql.extend(where)
 
     if sort_columns is not None:
-      sql.append("ORDER BY {}".format(",".join(map(quote_keywords,sort_columns))))
+      sql.append("ORDER BY {}".format(",".join(map(self.quote_keywords, sort_columns))))
+
+    if limit is not None:
+      sql.append("LIMIT {}".format(limit))
 
     return " ".join(sql), params
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 from multiprocessing import Process
 from urllib.parse import urlparse
@@ -8,25 +8,37 @@ from signal import signal, SIGTERM, SIGINT
 import atexit
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
+from glob import glob
+
+# This script is meant to be run on the same machine as the API servers.
+
+PGPASS = os.path.expanduser("~/.pgpass")
+if not os.path.isfile(PGPASS):
+  raise IOError("You must have a pgpass file to initiate database connections, usually stored in ~/.pgpass")
 
 def whereami():
   import sys
   from os import path
   from socket import gethostname
 
-  here = path.dirname(path.abspath(sys.argv[0]))
-
-  if gethostname() == "snowwhite":
-    here.replace("exports","net/snowwhite")
+  if "monitor.py" in sys.argv[0]:
+    here = path.dirname(path.abspath(sys.argv[0]))
+  else:
+    here = os.getcwd()
 
   return here
 
 # Load configurations
-cfg = os.path.abspath(os.path.join(whereami(),"../flask_cfg.py"))
-print(cfg)
-with open(cfg) as f:
-  code = compile(f.read(), cfg, 'exec')
-  exec(code)
+configs = {}
+cfg_paths = glob(os.path.join(whereami(),"../../etc/config-*py"))
+for p in cfg_paths:
+  loc = {}
+  with open(p) as f:
+    code = compile(f.read(), p, 'exec')
+    exec(code,loc)
+
+  key = os.path.basename(p).replace(".py","")
+  configs[key] = loc
 
 # If number of database connections exceeds this number, send warning.
 CON_COUNT_WARN = 250
@@ -36,13 +48,6 @@ INTERVAL_TIME = 30 # seconds
 
 with open("webhook") as fp:
   WEBHOOK_URL = fp.read().strip()
-
-API_TEST_URLS = [
-  "http://portaldev.sph.umich.edu/api/v1/annotation/recomb/results/?filter=id in 15 and chromosome eq '7' and position le 28496413 and position ge 27896413",
-  "http://portaldev.sph.umich.edu/api/v1/annotation/genes/?filter=source in 2 and chrom eq '7' and start le 28496413 and end ge 27896413",
-  "http://portaldev.sph.umich.edu/api/v1/pair/LD/results/?filter=reference eq 1 and chromosome2 eq '7' and position2 ge 27896413 and position2 le 28496413 and variant1 eq '7:28180556_T/C'",
-  "http://portaldev.sph.umich.edu/api/v1/annotation/intervals/results/?filter=id in 16 and chromosome eq '2' and start < 24200"
-]
 
 def is_flask(proc):
   try:
@@ -134,11 +139,23 @@ def find_flask_servers():
 
   return servers
 
-def monitor_database():
+def monitor_database(configs):
+  if not os.path.isfile(PGPASS):
+    raise IOError("File does not exist or cannot access: {}".format(PGPASS))
+
+  admin_pass = None
+  with open(PGPASS,"rt") as fp:
+    for line in fp:
+      host, port, database, user, passwd = line.strip().split(":")
+      if host.startswith("portaldev") and user == "admin":
+        print("Found admin password from pgpass")
+        admin_pass = passwd
+        break
+
   history = {}
   while 1:
-    for config in [ProdConfig,DevConfig]:
-      db_name = config.DATABASE["database"]
+    for config in configs.values():
+      db_name = config["DATABASE"]["database"]
       history.setdefault(db_name,{"time": 0,"count": 0})
 
       print("Checking database connections for '{}'...".format(db_name))
@@ -146,9 +163,9 @@ def monitor_database():
       db_url = URL(
         "postgres",
         "admin",
-        None,
-        config.DATABASE["host"],
-        config.DATABASE["port"],
+        admin_pass,
+        config["DATABASE"]["host"],
+        config["DATABASE"]["port"],
         db_name
       )
 
@@ -216,76 +233,13 @@ def monitor_flask():
 
     time.sleep(INTERVAL_TIME)
 
-def monitor_api_endpoints():
-  last = {}
-  current = {}
-  while 1:
-    now = int(time.time())
-    for url in API_TEST_URLS:
-      print("Checking endpoint: {}".format(url))
-
-      last.setdefault(url,{"state": True})
-      parsed = urlparse(url)
-
-      api_mode = None
-      if parsed.path.startswith("/api_internal_dev"):
-        api_mode = "dev"
-      elif parsed.path.startswith("/flaskdbg"):
-        api_mode = "dev"
-      elif parsed.path.startswith("/flaskquick"):
-        api_mode = "quick"
-      elif parsed.path.startswith("/flask"):
-        api_mode = "prod"
-      elif parsed.path.startswith("/api"):
-        api_mode = "prod"
-
-      timed_out = False
-      try:
-        resp = requests.get(url,timeout=5)
-      except requests.exceptions.Timeout:
-        timed_out = True
-
-      error = "[HTTP {}]: {}".format(resp.status_code,resp.reason)
-
-      if timed_out:
-        current[url] = {"state": False,"event": "Request timed out","time": int(time.time())}
-      elif not resp.ok:
-        current[url] = {"state": False,"event": "Request error","time": int(time.time()),"error": error}
-      else:
-        current[url] = {"state": True,"event": "Request OK","time": int(time.time())}
-
-      if last[url]["state"] and not current[url]["state"]:
-        send_slack(
-          api_mode,
-          current[url]["event"],
-          url,
-          None,
-          current[url]["error"]
-        )
-
-      if timed_out or not resp.ok:
-        print(colored("... FAIL : {}".format(error),"red"))
-      else:
-        print(colored("... OK","green"))
-
-      last[url] = current[url]
-
-      print("")
-      time.sleep(1)
-
-    time.sleep(INTERVAL_TIME)
-
 if __name__ == "__main__":
   proc_flask = Process(target=monitor_flask)
   proc_flask.start()
 
-  proc_api = Process(target=monitor_api_endpoints)
-  proc_api.start()
-
-  proc_db = Process(target=monitor_database)
+  proc_db = Process(target=monitor_database,args=(configs,))
   proc_db.start()
 
   proc_flask.join()
-  proc_api.join()
   proc_db.join()
 
