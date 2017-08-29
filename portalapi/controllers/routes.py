@@ -382,6 +382,32 @@ def interval_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @app.route(
+  "/v{}/annotation/snps/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def snps():
+  db_table = "rest.dbsnp_master"
+  db_cols = "id genome_build dbsnp_build taxid organism".split()
+
+  return std_response(db_table,db_cols)
+
+@app.route(
+  "/v{}/annotation/snps/results/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+
+def snps_results():
+  db_table = "rest.dbsnp_snps"
+  db_cols = "id rsid chrom pos ref alt".split()
+
+  field_to_col = dict(
+    chromosome = "chrom"
+  )
+
+  return std_response(db_table,db_cols,field_to_col)
+
+
+@app.route(
   "/v{}/statistic/single/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
