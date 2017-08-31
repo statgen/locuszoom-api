@@ -80,8 +80,8 @@ def before_request():
   # Hard coded for now - should look up from DB
   build_id = getattr(g, "build_id", None)
   if build_id is None:
-    build_id = {"grch37": {"db_snp": 9, "genes": 2},
-        "grch38": {"genes": 1}}
+    build_id = {"grch37": {"db_snp": 16, "genes": 2},
+        "grch38": {"db_snp": 17, "genes": 1}}
     g.build_id = build_id
 
 @app.teardown_appcontext
@@ -380,6 +380,32 @@ def interval_results():
   )
 
   return std_response(db_table,db_cols,field_to_col)
+
+@app.route(
+  "/v{}/annotation/snps/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def snps():
+  db_table = "rest.dbsnp_master"
+  db_cols = "id genome_build dbsnp_build taxid organism".split()
+
+  return std_response(db_table,db_cols)
+
+@app.route(
+  "/v{}/annotation/snps/results/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+
+def snps_results():
+  db_table = "rest.dbsnp_snps"
+  db_cols = "id rsid chrom pos ref alt".split()
+
+  field_to_col = dict(
+    chromosome = "chrom"
+  )
+
+  return std_response(db_table,db_cols,field_to_col)
+
 
 @app.route(
   "/v{}/statistic/single/".format(app.config["API_VERSION"]),
