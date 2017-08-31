@@ -871,6 +871,8 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals
 Field | Description
 ----- | -----------
 id | Interval dataset identifier
+state_id | A (numeric) state identifier for this annotation, such as determined by ChromHMM. (if applicable)  
+state_name | A human-readable state name that generally corresponds to an entry in state_id. (if applicable)
 public_id | Public/other database ID for this interval (if applicable)
 chromosome | Chromosome
 start | Start of interval (in bp)
