@@ -28,7 +28,7 @@ class Exon(object):
       raise ValueError, "Comparing exons on separate chromosomes"
 
 class Transcript(object):
-  cargs = "transcript_id transcript_name transcript_chrom start end strand".split()
+  cargs = "transcript_id chrom start end strand".split()
 
   def __init__(self,**kwargs):
     for arg in Transcript.cargs:
@@ -60,7 +60,7 @@ class Transcript(object):
     return self.transcript_id == other.transcript_id
 
   def __lt__(self,other):
-    if self.transcript_chrom == other.transcript_chrom:
+    if self.chrom == other.chrom:
       if self.start < other.start:
         return True
       else:
@@ -112,8 +112,7 @@ def test():
   g = Gene(gene_id="ENSG1",gene_name="ABC",chrom="1",start=42,end=800,strand="+")
   t = Transcript(
     transcript_id="ENST1",
-    transcript_name="E1",
-    transcript_chrom="1",
+    chrom="1",
     start=45,
     end=600,
     strand="+"

@@ -582,104 +582,72 @@ def ld_results():
   methods = ["GET"]
 )
 def genes():
-  db_table = "rest.genes"
-  db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
+  db_table = "rest.gene_data"
+  db_cols = "id feature_type gene_id gene_name chrom start end strand transcript_id exon_id".split()
 
-  # Translate filter string "fields" to database column names
-  field_to_col = dict(
-    source = "source_id",
-    start = "interval_start",
-    end = "interval_end",
-    chrom = "chromosome"
-  )
-
-  # This is used to translate database column names into the names expected in the response
-  # Unfortunately this is highly inconsistent, but it's in production
-  response_names = {
-    "exon_end": "end",
-    "exon_start": "start",
-    "exon_strand": "strand",
-    "transcript_strand": "strand",
-    "transcript_start": "start",
-    "transcript_end": "end"
+  field_to_col = {
+    "source": "id"
   }
 
-  # Does the user want transcripts?
-  transcripts_arg = request.args.get("transcripts")
-  do_transcripts = True if transcripts_arg is None or transcripts_arg.lower() in ("t","true") else False
+  orig_filter = request.args.get("filter")
+  if orig_filter is None:
+    raise FlaskException("Filter is a required parameter for this endpoint")
 
+  sql_compiler = SQLCompiler()
+
+  cols = "id gene_id gene_name chrom start end strand".split()
+  sql_stmt, sql_params = sql_compiler.to_sql(orig_filter,db_table,db_cols,cols,None,field_to_col)
+  sql_stmt += " AND feature_type = 'gene'"
+
+  cur = g.db.execute(text(sql_stmt),sql_params)
   dgenes = {}
-  genes_array = std_response(db_table,db_cols,field_to_col,return_json=False,return_format="objects")
-  for i, gene_data in enumerate(genes_array):
+  genes_arr = []
+  for row in cur:
+    gene_data = dict(zip(cols,row))
     gene = Gene(**gene_data)
     dgenes[gene_data["gene_id"]] = gene
-    genes_array[i] = gene
+    genes_arr.append(gene)
 
-  # Which source IDs were requested? May need this for requesting transcripts/exons, if the user wants them.
-  fp = FilterParser()
-  params = fp.statements(request.args.get("filter"))
-  sources_tmp = params["source"].value
+  # Now retrieve transcripts/exons
+  cols = "id feature_type gene_id chrom start end strand transcript_id exon_id".split()
+  sql_stmt, sql_params = sql_compiler.to_sql(orig_filter,db_table,db_cols,cols,None,field_to_col)
+  sql_stmt += " AND (feature_type = 'transcript' OR feature_type = 'exon') order by case feature_type when 'transcript' then 1 when 'exon' then 2 else 3 end"
 
-  # Check each source to make sure it's an integer / sanitize user input
-  sources = []
-  for i in sources_tmp:
-    try:
-      i = int(i)
-    except:
-      continue
+  trans_keys = "transcript_id chrom start end strand".split()
+  exon_keys = "exon_id chrom start end strand".split()
+  dtranscripts = {}
+  cur = g.db.execute(text(sql_stmt),sql_params)
+  for row in cur:
+    rowd = dict(zip(cols,row))
 
-    sources.append(i)
+    if rowd["feature_type"] == "transcript":
+      tx_id = row["transcript_id"]
+      gene_id = row["gene_id"]
+      chrom = row["chrom"]
 
-  if len(sources) == 0:
-    raise FlaskException("No valid sources specified in filter string",400)
-
-#  api_internal_dev=# select * from rest.sp_transcripts_exons('{ENSG00000116649.9,ENSG00000148737.16}'::VARCHAR[],'{1}'::INT[]);
-#  source_id |      gene_id      |   transcript_id   | transcript_name | transcript_chrom | transcript_start | transcript_end | transcript_strand |      exon_id      | exon_start | exon_end | exon_strand
-# -----------+-------------------+-------------------+-----------------+------------------+------------------+----------------+-------------------+-------------------+------------+----------+-------------
-#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00000743124.1 |   11055781 | 11055926 | -
-#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00000743131.1 |   11059225 | 11059345 | -
-#          1 | ENSG00000116649.9 | ENST00000376957.6 | SRM-001         | 1                |         11054589 |       11060024 | -                 | ENSE00001836529.1 |   11059777 | 11060024 | -
-
-  if do_transcripts:
-    # They want transcripts and exons included in the results.
-    cur = g.db.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.callproc(
-      "rest.sp_transcripts_exons",
-      [
-        dgenes.keys(),
-        sources
-      ]
-    )
-
-    dtranscripts = {}
-    for row in cur.fetchall():
-      row = dict(row)
-      tsid = row["transcript_id"]
-      geneid = row["gene_id"]
-      chrom = row["transcript_chrom"]
-
-      # Pull out transcript
-      transcript = dtranscripts.get(tsid,None)
+      transcript = dtranscripts.get(tx_id,None)
       if transcript is None:
-        # We've never seen this transcript before. Create it, and add it to the proper gene.
-        transcript_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "transcript_id transcript_name transcript_chrom transcript_start transcript_end transcript_strand".split()}
+        transcript_data = {k: rowd[k] for k in trans_keys}
         transcript = Transcript(**transcript_data)
+        dtranscripts[tx_id] = transcript
+        dgenes[gene_id].add_transcript(transcript)
 
-        dtranscripts[tsid] = transcript
-        dgenes[geneid].add_transcript(transcript)
-
-      # Pull out exon
-      exon_data = {response_names.get(k,k): v for k, v in row.iteritems() if k in "exon_id exon_start exon_end exon_strand".split()}
-      exon_data["chrom"] = chrom
+    elif rowd["feature_type"] == "exon":
+      gene_id = row["gene_id"]
+      tx_id = row["transcript_id"]
+      exon_id = row["exon_id"]
+      exon_data = {k: rowd[k] for k in exon_keys}
       exon = Exon(**exon_data)
 
-      # Add exon to transcript
-      transcript.add_exon(exon)
+      gene = dgenes.get(gene_id)
+      if gene is not None:
+        gene.add_exon(exon)
 
-      # Add exon to gene (the gene will end up with a list of all possible exons)
-      dgenes[geneid].add_exon(exon)
+      transcript = dtranscripts.get(tx_id)
+      if transcript is not None:
+        transcript.add_exon(exon)
 
-  json_genes = [gg.to_dict() for gg in genes_array]
+  json_genes = [gene.to_dict() for gene in genes_arr]
 
   outer = {
     "data": json_genes,
@@ -687,7 +655,6 @@ def genes():
   }
 
   return jsonify(outer)
-
 
 @app.route(
   "/v{}/annotation/omnisearch/".format(app.config["API_VERSION"]),
