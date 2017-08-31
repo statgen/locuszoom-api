@@ -80,8 +80,8 @@ def before_request():
   # Hard coded for now - should look up from DB
   build_id = getattr(g, "build_id", None)
   if build_id is None:
-    build_id = {"grch37": {"db_snp": 9, "genes": 2},
-        "grch38": {"genes": 1}}
+    build_id = {"grch37": {"db_snp": 16, "genes": 2},
+        "grch38": {"db_snp": 17, "genes": 1}}
     g.build_id = build_id
 
 @app.teardown_appcontext
