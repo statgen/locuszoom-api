@@ -9,7 +9,7 @@ def port():
 def host():
   return os.environ["FLASK_HOST"]
 
-def test_gene_cetp(host,port):
+def test_gene(host,port):
   params = {
     "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060"
   }
