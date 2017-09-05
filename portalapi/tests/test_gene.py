@@ -21,20 +21,38 @@ def test_gene_cetp(host,port):
   assert len(js["data"]) > 0
 
   # Check format of gene
-  gene1 = js["data"][0]
-  for key in ("chrom","end","exons","gene_id","gene_name","start","strand","transcripts"):
-    assert key in gene1
+  for gene in js["data"]:
+    for key in ("chrom","end","exons","gene_id","gene_name","start","strand","transcripts"):
+      assert key in gene
 
-  assert isinstance(gene1["chrom"],string_types)
-  assert isinstance(gene1["end"],int)
-  assert isinstance(gene1["start"],int)
-  assert len(gene1["transcripts"]) > 0
-  assert len(gene1["exons"]) > 0
+    assert isinstance(gene["chrom"],string_types)
+    assert isinstance(gene["gene_id"],string_types)
+    assert isinstance(gene["gene_name"],string_types)
+    assert gene["strand"] in ("+","-")
+    assert isinstance(gene["end"],int)
+    assert isinstance(gene["start"],int)
 
-  # CETP should be in this region
-  genes = [x["gene_name"] for x in js["data"]]
-  assert "CETP" in genes
+    assert len(gene["exons"]) > 0
 
-  # We're on chromosome 16
-  assert gene1["chrom"] == "16"
+    for exon in gene["exons"]:
+      for key in ("chrom","end","exon_id","start","strand"):
+        assert key in exon
+
+      assert isinstance(exon["exon_id"],string_types)
+      assert isinstance(exon["chrom"],string_types)
+      assert isinstance(exon["end"],int)
+      assert isinstance(exon["start"],int)
+      assert exon["strand"] in ("+","-")
+
+    assert len(gene["transcripts"]) > 0
+
+    for tx in gene["transcripts"]:
+      for key in ("chrom","end","exons","start","strand","transcript_id"):
+        assert key in tx
+
+      assert isinstance(tx["transcript_id"],string_types)
+      assert isinstance(tx["chrom"],string_types)
+      assert isinstance(tx["end"],int)
+      assert isinstance(tx["start"],int)
+      assert tx["strand"] in ("+","-")
 
