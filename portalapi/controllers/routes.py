@@ -440,6 +440,51 @@ def single_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @app.route(
+  "/v{}/statistic/phewas/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def phewas():
+  filter_str = request.args.get("filter")
+  if filter_str is None:
+    raise FlaskException("No filter string specified",400)
+
+  fparser = FilterParser()
+  stmts = fparser.statements(filter_str)
+  variant = getattr(stmts.get("variant"),"value",None)
+  if variant is None:
+    raise FlaskException(400,"Must provide a filter string with field 'variant' specified")
+
+  db_cols = ["id","study","trait","tech","build","analysis","pmid",
+             "variant_name","chromosome","position","ref_allele",
+             "ref_allele_freq","log_pvalue","score_test_stat"]
+
+  sql = """
+    SELECT
+      sa.id,sa.study,sa.trait,sa.tech,sa.build,sa.analysis,sa.pmid,
+      sr.variant_name,sr.chromosome,sr.position,sr.ref_allele,sr.ref_allele_freq,
+      sr.log_pvalue,sr.score_test_stat
+    FROM rest.single_analyses sa
+    JOIN rest.single_analyses_results sr
+    ON sa.id = sr.analysis_id
+    WHERE variant_name = :vname
+    ORDER BY log_pvalue DESC;
+  """
+
+  return_fmt = request.args.get("format")
+  if return_fmt is None or return_fmt == "":
+    return_fmt = "table"
+
+  if return_fmt not in ("table","objects"):
+    raise FlaskException(400,"format must be either 'table' or 'objects'")
+
+  cur = g.db.execute(text(sql),{"vname": variant})
+  data = reshape_data(cur,db_cols,None,return_fmt)
+  return jsonify({
+    "data": data,
+    "lastPage": None
+  })
+
+@app.route(
   "/v{}/statistic/pair/LD/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
