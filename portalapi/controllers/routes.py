@@ -412,8 +412,8 @@ def snps_results():
   methods = ["GET"]
 )
 def single():
-  db_table = "rest.single_analyses"
-  db_cols = "id study trait tech build imputed analysis pmid date first_author last_author".split()
+  db_table = "rest.assoc_master"
+  db_cols = "id study trait tech build imputed analysis pmid pubdate first_author last_author".split()
 
   # For some reason, this database table has columns that don't match the field names in the filter string.
   # field_to_col = dict(
@@ -427,14 +427,16 @@ def single():
   methods = ["GET"]
 )
 def single_results():
-  db_table = "rest.single_analyses_results"
-  db_cols = "analysis_id variant_name chromosome position ref_allele_freq ref_allele p_value log_pvalue score_test_stat".split()
+  db_table = "rest.assoc_results"
+  db_cols = "id variant_name chrom pos ref_allele ref_freq log_pvalue score_stat".split()
 
-  # For some reason, this database table has columns that don't match the field names in the filter string.
   field_to_col = dict(
-    analysis = "analysis_id",
+    analysis = "id",
     variant = "variant_name",
-    pvalue = "p_value"
+    chromosome = "chrom",
+    position = "pos",
+    score_test_stat = "score_stat",
+    ref_allele_freq = "ref_freq"
   )
 
   return std_response(db_table,db_cols,field_to_col)
