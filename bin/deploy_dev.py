@@ -1,6 +1,41 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, sys, requests, time
+import os, sys, requests, time, psutil, signal
+
+API_HOME = "/home/portaldev/lzapi_dev"
+CFG = "etc/config-dev.py"
+
+def find_server():
+  for p in psutil.process_iter():
+    try:
+      if p.name() == "gunicorn" and p.cwd() == API_HOME:
+        return p
+    except:
+      pass
+
+def process_exists(pid):
+  try:
+    psutil.Process(pid)
+    return True
+  except:
+    return False
+
+def kill_server(pid,timeout=3):
+  """
+  Try to kill a process by PID with SIGTERM.
+  If it still exists after X seconds, SIGKILL it.
+  """
+
+  os.kill(pid,signal.SIGTERM)
+  time.sleep(timeout)
+
+  if process_exists(pid):
+    os.kill(pid,signal.SIGKILL)
+
+  time.sleep(timeout)
+
+  if process_exists(pid):
+    raise Exception("Unable to kill server process at PID " + str(pid))
 
 def bash(cmd,check=True,wait=True):
   from subprocess import Popen
@@ -16,17 +51,17 @@ def bash(cmd,check=True,wait=True):
   return p.returncode
 
 # Dev server location
-os.chdir("/home/portaldev/lzapi_dev")
+os.chdir(API_HOME)
 
 # Import variables first
-cfg = "etc/config-dev.py"
-exec(compile(open(cfg,"rb").read(),cfg,'exec'),globals(),locals())
+exec(compile(open(CFG,"rb").read(),CFG,'exec'),globals(),locals())
 
 # Kill currently running server
-print("Killing server running on port {}".format(FLASK_PORT))
-killcode = bash("bin/kill_server.py --port {} --kill".format(FLASK_PORT),check=False)
-if killcode not in (0,1):
-  raise Exception("Script to kill server failed unexpectedly")
+pid = find_server()
+if pid is None:
+  raise Exception("Could not find existing server running under " + API_HOME)
+else:
+  kill_server(pid)
 
 # Checkout
 bash("git checkout dev && git pull")
