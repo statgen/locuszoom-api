@@ -64,7 +64,7 @@ else:
   kill_server(pid)
 
 # Checkout
-bash("git checkout dev && git pull")
+bash("git fetch && git reset --hard origin/dev")
 
 # Activate environment and run server
 print("Starting development server")
