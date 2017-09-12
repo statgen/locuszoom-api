@@ -9,7 +9,7 @@ def find_server():
   for p in psutil.process_iter():
     try:
       if p.name() == "gunicorn" and p.cwd() == API_HOME:
-        return p
+        return p.pid
     except:
       pass
 
