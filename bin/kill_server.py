@@ -12,6 +12,13 @@ def find_server(port):
     except:
       continue
 
+def process_exists(pid):
+  try:
+    psutil.Process(pid)
+    return True
+  except:
+    return False
+
 def get_args():
   from argparse import ArgumentParser
   p = ArgumentParser()
@@ -33,10 +40,19 @@ if __name__ == "__main__":
       print("Could not find a process attached to port {}".format(args.port),file=sys.stderr)
       sys.exit(1)
 
+    pid = int(pid)
+
     if not args.kill:
       print(find_server(args.port))
     else:
-      os.kill(int(pid),signal.SIGTERM)
+      os.kill(pid,signal.SIGTERM)
+
+      # Wait 5 seconds and check if terminated
+      time.sleep(5)
+      if process_exists(pid):
+        # No more mister nice guy
+        os.kill(pid,signal.SIGKILL)
+
   except SystemExit:
     raise
   except:
