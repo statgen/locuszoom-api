@@ -58,9 +58,7 @@ exec(compile(open(CFG,"rb").read(),CFG,'exec'),globals(),locals())
 
 # Kill currently running server
 pid = find_server()
-if pid is None:
-  raise Exception("Could not find existing server running under " + API_HOME)
-else:
+if pid is not None:
   kill_server(pid)
 
 # Checkout
