@@ -457,16 +457,16 @@ def phewas():
     raise FlaskException(400,"Must provide a filter string with field 'variant' specified")
 
   db_cols = ["id","study","trait","trait_label","trait_group","tech","build","analysis","pmid",
-             "variant_name","chromosome","position","ref_allele",
-             "ref_allele_freq","log_pvalue","score_test_stat"]
+             "variant_name","chrom","pos","ref_allele",
+             "ref_freq","log_pvalue","score_stat"]
 
   sql = """
     SELECT
       sa.id,sa.study,sa.trait,traits.label as trait_label,traits.grouping as trait_group,sa.tech,sa.build,sa.analysis,sa.pmid,
-      sr.variant_name,sr.chromosome,sr.position,sr.ref_allele,sr.ref_allele_freq,
-      sr.log_pvalue,sr.score_test_stat
-    FROM rest.single_analyses sa
-      JOIN rest.single_analyses_results sr ON sa.id = sr.analysis_id
+      sr.variant_name,sr.chrom,sr.pos,sr.ref_allele,sr.ref_freq,
+      sr.log_pvalue,sr.score_stat
+    FROM rest.assoc_master sa
+      JOIN rest.assoc_results sr ON sa.id = sr.id
       LEFT JOIN rest.traits ON sa.trait = traits.trait
     WHERE variant_name = :vname
     ORDER BY log_pvalue DESC;
