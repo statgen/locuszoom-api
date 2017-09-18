@@ -446,6 +446,10 @@ def single_results():
   methods = ["GET"]
 )
 def phewas():
+  builds = request.args.getlist("build")
+  if len(builds) == 0:
+    raise FlaskException("Must provide build parameter",400)
+
   filter_str = request.args.get("filter")
   if filter_str is None:
     raise FlaskException("No filter string specified",400)
@@ -468,7 +472,7 @@ def phewas():
     FROM rest.assoc_master sa
       JOIN rest.assoc_results sr ON sa.id = sr.id
       LEFT JOIN rest.traits ON sa.trait = traits.trait
-    WHERE variant_name = :vname
+    WHERE variant_name = :vname AND sa.build = ANY(:builds)
     ORDER BY log_pvalue DESC;
   """
 
@@ -479,9 +483,12 @@ def phewas():
   if return_fmt not in ("table","objects"):
     raise FlaskException(400,"format must be either 'table' or 'objects'")
 
-  cur = g.db.execute(text(sql),{"vname": variant})
+  cur = g.db.execute(text(sql),{"vname": variant,"builds": builds})
   data = reshape_data(cur,db_cols,None,return_fmt)
   return jsonify({
+    "meta": {
+      "build": builds
+    },
     "data": data,
     "lastPage": None
   })
