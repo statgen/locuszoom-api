@@ -1,10 +1,21 @@
-import os
+import os, datetime
 from flask import Flask
 from flask.ext.cors import CORS
 from flask.ext.cache import Cache
+from flask.json import JSONEncoder
 
 # Create flask app
 app = Flask(__name__)
+
+# Modified JSON encoder to handle datetimes
+class CustomJSONEncoder(JSONEncoder):
+  def default(self,x):
+    if isinstance(x,(datetime.date,datetime.datetime)):
+      return x.isoformat()
+
+    return JSONEncoder.default(self,x)
+
+app.json_encoder = CustomJSONEncoder
 
 # Which config to use
 mode = os.environ.get("PORTALAPI_MODE")
