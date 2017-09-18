@@ -123,7 +123,7 @@ class JSONFloat(float):
   def __repr__(self):
     return "%0.2g" % self
 
-def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None):
+def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
   """
   Standard API response for simple cases of executing a filter against a single
   database table.
@@ -197,7 +197,7 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
   else:
     sort_fields = None
 
-  sql, params = sql_compiler.to_sql(filter_str, db_table, db_cols, fields, sort_fields, field_to_cols)
+  sql, params = sql_compiler.to_sql(filter_str, db_table, db_cols, fields, sort_fields, field_to_cols, limit)
 
   # text() is sqlalchemy helper object when specifying SQL as plain text string
   # allows for bind parameters to be used
@@ -439,7 +439,14 @@ def single_results():
     ref_allele_freq = "ref_freq"
   )
 
-  return std_response(db_table,db_cols,field_to_col)
+  limit = request.args.get("limit")
+  try:
+    if limit is not None:
+      limit = int(limit)
+  except:
+    raise FlaskException("Invalid limit parameter, must be integer",400)
+
+  return std_response(db_table,db_cols,field_to_col,limit=limit)
 
 @app.route(
   "/v{}/statistic/phewas/".format(app.config["API_VERSION"]),
