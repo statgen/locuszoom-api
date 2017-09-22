@@ -639,6 +639,15 @@ def ld_results():
   return final_resp
 
 @app.route(
+  "/v{}/annotation/genes/sources/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def gene_sources():
+  db_table = "rest.gene_master"
+  db_cols = "id source version genome_build taxid organism".split()
+  return std_response(db_table,db_cols)
+
+@app.route(
   "/v{}/annotation/genes/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
