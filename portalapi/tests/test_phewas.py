@@ -17,7 +17,7 @@ def test_phewas(host,port):
   assert resp.ok
 
   data = resp.json()
-  fields = "analysis build chromosome id log_pvalue pmid position ref_allele ref_allele_freq score_test_stat " \
+  fields = "description build chromosome id log_pvalue pmid position ref_allele ref_allele_freq score_test_stat " \
            "study tech trait trait_group trait_label variant".split()
 
   for k in fields:
