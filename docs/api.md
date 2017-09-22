@@ -270,21 +270,21 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?bu
   "data": [
     {
       "id": 45,
+      "trait_group": "Metabolic disease",
+      "trait_label": "Type 2 diabetes",
+      "log_pvalue": 107.032,
       "variant": "10:114758349_C/T"
-      "build": "GRCh37",
       "chromosome": "10",
       "position": 114758349,
+      "build": "GRCh37",
       "ref_allele": "C",
       "ref_allele_freq": null,
       "score_test_stat": null,
       "study": "DIAGRAM",
       "description": "DIAGRAM 1000G T2D meta-analysis",
-      "log_pvalue": 107.032,
-      "pmid": "28566273",
       "tech": null,
+      "pmid": "28566273",
       "trait": "T2D",
-      "trait_group": "Metabolic disease",
-      "trait_label": "Type 2 diabetes",
     }
   ],
   "lastPage": null,
@@ -300,17 +300,17 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?bu
 
 Field | Description | Must exist in response for PheWAS module
 ----- | ----------- | ----------------------------------------
-id | Dataset identifier |
+id | Unique identifier for each dataset | Yes
 build | Genome build |
-variant | Variant | Yes
+variant | Variant
 chromosome | Chromosome for variant
 position | Position
 log_pvalue | -log10 p-value | Yes
-trait | Trait code
-trait_label | Longer description of trait | Yes
-trait_group | Category that trait belongs to | Yes
+trait | Trait code. Example: "T2D"
+trait_label | Longer description of trait, e.g. "Type 2 diabetes" | Yes
+trait_group | Arbitrary grouping/category the trait belongs to, e.g. "metabolic diseases" | Yes
 description | Description of analysis this dataset represents
-study | Study name
+study | Study, consortium, or group that generated this analysis
 tech | Genotyping/sequencing technology
 imputed | Reference panel used if data was imputed
 
@@ -318,14 +318,14 @@ imputed | Reference panel used if data was imputed
 
 Param | Description
 ----- | -----------
-build | Genome build for the requested variant
-format | Format of the response. See "Formats" below.
+build | Genome build for the requested variant. For example 'GRCh37' or 'GRCh38'. Trailing version (e.g. p13.3) will not be present.
+format | Format of the response. Our API server supports two formats - the default is an array of arrays, and the optional `objects` format returns an array of JSON objects. LocusZoom.js will only generate requests that use `format=objects`. 
 
 #### FILTERS
 
 Filter | Description
 ------ | -----------
-variant eq 'X' | Select results for this variant
+variant eq 'X' | Select results for this variant. Variant should be in `chr:pos_ref/alt` format.
 
 #### META
 
@@ -333,17 +333,11 @@ Response will contain a `meta` object, with the following attributes:
 
 Attribute | Value
 --------- | -----
-build | Genome build(s) that were requested. Records returned will be only for these builds. 
+build | Array of genome build(s) that were requested. Records returned will be only for these builds. This will typically only be 1 build. In the future we may begin upconverting variants to other builds. 
 
 #### SORT
 
 Not yet implemented
-
-#### FORMATS
-
-The default format returns JSON where each key is a column name, and the value is an array of values (one per row entry.)
-
-An alternative format returns each row as an object itself. Add `format=objects` to the URL for this.
 
 ## Linkage disequilibrium
 
