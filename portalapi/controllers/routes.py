@@ -467,13 +467,13 @@ def phewas():
   if variant is None:
     raise FlaskException(400,"Must provide a filter string with field 'variant' specified")
 
-  db_cols = ["id","analysis","study","trait","trait_label","trait_group","tech","build","analysis","pmid",
+  db_cols = ["id","description","study","trait","trait_label","trait_group","tech","build","pmid",
              "variant","chromosome","position","ref_allele",
              "ref_allele_freq","log_pvalue","score_test_stat"]
 
   sql = """
     SELECT
-      sa.id,sa.study,sa.trait,traits.label as trait_label,traits.grouping as trait_group,sa.tech,sa.build,sa.analysis,sa.pmid,
+      sa.id,sa.study,sa.trait,traits.label as trait_label,traits.grouping as trait_group,sa.tech,sa.build,sa.analysis as description,sa.pmid,
       sr.variant_name as variant,sr.chrom as chromosome,sr.pos as position,sr.ref_allele,sr.ref_freq as ref_allele_freq,
       sr.log_pvalue,sr.score_stat as score_test_stat
     FROM rest.assoc_master sa
