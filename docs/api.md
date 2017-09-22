@@ -103,12 +103,16 @@ Relative Resource URI | Description
 --------------------- | -----------
 /statistic/single/ | Collection of all available studies that have single variant association results.
 /statistic/single/results/ | Collection of all single variant association results.
+/statistic/phewas/ | Return all available association statistics given a variant.
 /statistic/pair/LD/ | Collection of all datasets that have available linkage disequilibrium information or that can be used to compute linkage disequilibrium.
 /statistic/pair/LD/results/ | Collection of pair-wise linkage disequilibrium coefficients between all variants.
 /statistic/pair/ScoreCov/ | Collection of all datasets that have available covariance matrices between single variant score test statistics.
 /statistic/pair/ScoreCov/results/ | Collection of covariance values between all single variant score test statistics.
 /annotation/recomb/ | Recombination rates
 /annotation/variant/ | Collection of all available single variant annotations.
+/annotation/snps/ | List all dbSNP datasets
+/annotation/snps/results/ | Query by rsid and find chrom/pos/ref/alt, or vice versa.
+/annotation/omnisearch/ | Search for genomic coordinates given a rsID, gene, transcript, etc.
 /annotation/intervals/ | Collection of all available genome interval annotation sources (such as GENCODE).
 /annotation/intervals/results/ | Collection of all available genome interval annotations.
 /annotation/genes/sources/ | Collection of all available gene annotation resources.
@@ -248,6 +252,98 @@ position le 60000 | End position in base-pairs of the interval of interest.
 #### SORT
 
 Not yet implemented
+
+### PheWAS: all available results for a given variant
+
+`GET /statistic/phewas/`
+
+```shell
+# We're using format=objects here as it's probably the preferred way to retrieve the data.
+# The standard data frame / array of arrays layout is also available if you remove format=objects.
+curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?build=GRCh37&format=objects" --data-urlencode "filter=variant eq '10:114758349_C/T'"
+```
+
+> The JSON response will look like:
+
+```json
+{
+  "data": [
+    {
+      "id": 45,
+      "variant": "10:114758349_C/T"
+      "build": "GRCh37",
+      "chromosome": "10",
+      "position": 114758349,
+      "ref_allele": "C",
+      "ref_allele_freq": null,
+      "score_test_stat": null,
+      "study": "DIAGRAM",
+      "description": "DIAGRAM 1000G T2D meta-analysis",
+      "log_pvalue": 107.032,
+      "pmid": "28566273",
+      "tech": null,
+      "trait": "T2D",
+      "trait_group": "Metabolic disease",
+      "trait_label": "Type 2 diabetes",
+    }
+  ],
+  "lastPage": null,
+  "meta": {
+    "build": [
+      "GRCh37"
+    ]
+  }
+}
+```
+
+#### FIELDS
+
+Field | Description | Must exist in response for PheWAS module
+----- | ----------- | ----------------------------------------
+id | Dataset identifier |
+build | Genome build |
+variant | Variant | Yes
+chromosome | Chromosome for variant
+position | Position
+log_pvalue | -log10 p-value | Yes
+trait | Trait code
+trait_label | Longer description of trait | Yes
+trait_group | Category that trait belongs to | Yes
+description | Description of analysis this dataset represents
+study | Study name
+tech | Genotyping/sequencing technology
+imputed | Reference panel used if data was imputed
+
+#### PARAMETERS
+
+Param | Description
+----- | -----------
+build | Genome build for the requested variant
+format | Format of the response. See "Formats" below.
+
+#### FILTERS
+
+Filter | Description
+------ | -----------
+variant eq 'X' | Select results for this variant
+
+#### META
+
+Response will contain a `meta` object, with the following attributes:
+
+Attribute | Value
+--------- | -----
+build | Genome build(s) that were requested. Records returned will be only for these builds. 
+
+#### SORT
+
+Not yet implemented
+
+#### FORMATS
+
+The default format returns JSON where each key is a column name, and the value is an array of values (one per row entry.)
+
+An alternative format returns each row as an object itself. Add `format=objects` to the URL for this.
 
 ## Linkage disequilibrium
 
@@ -871,7 +967,7 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals
 Field | Description
 ----- | -----------
 id | Interval dataset identifier
-state_id | A (numeric) state identifier for this annotation, such as determined by ChromHMM. (if applicable)  
+state_id | A (numeric) state identifier for this annotation, such as determined by ChromHMM. (if applicable)
 state_name | A human-readable state name that generally corresponds to an entry in state_id. (if applicable)
 public_id | Public/other database ID for this interval (if applicable)
 chromosome | Chromosome
