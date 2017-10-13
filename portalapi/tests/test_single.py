@@ -13,7 +13,7 @@ def test_statistic_single(host,port):
   assert resp.ok
 
   data = resp.json()
-  for k in "analysis build pubdate first_author last_author id imputed pmid pubdate study tech trait".split():
+  for k in "analysis build date first_author last_author id imputed pmid pubdate study tech trait".split():
     assert k in data["data"]
     assert len(data["data"][k]) > 1
 
