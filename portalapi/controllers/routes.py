@@ -514,6 +514,11 @@ def phewas():
   "/v{}/statistic/pair/LD/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
+@app.route(
+  # Keep backwards compat
+  "/v{}/pair/LD/results/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
 def ld_results():
   # GET request parameters
   filter_str = request.args.get("filter")
