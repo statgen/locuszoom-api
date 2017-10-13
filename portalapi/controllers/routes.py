@@ -411,6 +411,11 @@ def snps_results():
   "/v{}/statistic/single/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
+@app.route(
+  # Keep backwards compat
+  "/v{}/single/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
 def single():
   db_table = "rest.assoc_master"
   db_cols = "id study trait tech build imputed analysis pmid pubdate first_author last_author".split()
@@ -424,6 +429,11 @@ def single():
 
 @app.route(
   "/v{}/statistic/single/results/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+@app.route(
+  # Keep backwards compat
+  "/v{}/single/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def single_results():
