@@ -53,6 +53,18 @@ class FlaskException(Exception):
     rv['message'] = self.message
     return rv
 
+@app.errorhandler(Exception)
+def handle_all(error):
+  if app.debug:
+    raise
+
+  response = jsonify({
+    "message": "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues",
+    "request": request.url
+  })
+  response.status_code = 500
+  return response
+
 @app.errorhandler(FlaskException)
 def handle_exception(error):
   response = jsonify(error.to_dict())
