@@ -601,12 +601,14 @@ def ld_results():
   outer["data"] = data
 
   # Do we need to compute, or is the cache sufficient?
+  cache_data = None
   try:
     cache_data = ld_cache.retrieve(cache_key,start,end)
+  except redis.ConnectionError:
+    print "Warning: cache retrieval failed (redis was unable to connect)"
   except:
-    print "Warning: cache retrieval failed, traceback was: "
+    print "Error: redis connected, but retrieving data failed"
     traceback.print_exc()
-    cache_data = None
 
   if cache_data is None:
     # Need to compute. Either the range given is larger than we've previously computed,
@@ -648,8 +650,10 @@ def ld_results():
 
     try:
       ld_cache.store(cache_key,start,end,for_cache)
+    except redis.ConnectionError:
+      print "Warning: cache storage failed (redis was unable to connect)"
     except:
-      print "Warning: storing data in cache failed, traceback was: "
+      print "Error: storing data in cache failed, traceback was: "
       traceback.print_exc()
 
   else:
