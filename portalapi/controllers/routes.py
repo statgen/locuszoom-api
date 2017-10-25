@@ -18,6 +18,7 @@ import redis
 import traceback
 import gzip
 import time
+import math
 
 START_TIME = time.time()
 
@@ -583,9 +584,9 @@ def ld_results():
   rlength = abs(end - start)
 
   # Is the region larger than we're willing to calculate?
-  max_flank = app.config["LD_MAX_FLANK"]
-  if abs(refpos - start) > max_flank or abs(refpos - end) > max_flank:
-    raise FlaskException("Distance requested from refsnp for LD calculation too far",413)
+  max_ld_size = app.config["LD_MAX_SIZE"]
+  if math.fabs(end - start) > max_ld_size:
+    raise FlaskException("Requested LD window is too large, exceeded maximum of {}".format(max_ld_size),413)
 
   outer = {
     "data": None,
