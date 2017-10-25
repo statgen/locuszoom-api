@@ -64,6 +64,11 @@ if pid is not None:
 # Checkout
 bash("git fetch && git reset --hard origin/dev")
 
+# Setup venv
+bash("rm -rf venv")
+bash("python -m virtualenv --no-site-packages venv")
+bash("source venv/bin/activate && pip install -r requirements.txt")
+
 # Activate environment and run server
 print("Starting development server")
 bash("source venv/bin/activate && bin/run_gunicorn.py dev",wait=False)
