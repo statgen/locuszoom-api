@@ -4,7 +4,7 @@ from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from flask import g, jsonify, request
-from portalapi import app, cache, sentry
+from portalapi import app, cache, sentry, mode
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 from portalapi.cache import RedisIntervalCache
@@ -56,7 +56,10 @@ class FlaskException(Exception):
 @app.errorhandler(Exception)
 def handle_all(error):
   # Log all exceptions to Sentry
-  sentry.captureException()
+  # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
+  # these exceptions in the jenkins console)
+  if mode != "jenkins":
+    sentry.captureException()
 
   # If we're in debug mode, re-raise the exception so we get the
   # browser debugger
