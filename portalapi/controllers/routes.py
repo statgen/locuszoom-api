@@ -4,7 +4,7 @@ from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from flask import g, jsonify, request
-from portalapi import app, cache
+from portalapi import app, cache, sentry
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 from portalapi.cache import RedisIntervalCache
@@ -55,8 +55,17 @@ class FlaskException(Exception):
 
 @app.errorhandler(Exception)
 def handle_all(error):
+  # Log all exceptions to Sentry
+  sentry.captureException()
+
+  # If we're in debug mode, re-raise the exception so we get the
+  # browser debugger
   if app.debug:
     raise
+
+  # Also log the exception to the console.
+  print("Exception thrown while handling request: " + request.url)
+  traceback.print_exc()
 
   response = jsonify({
     "message": "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues",

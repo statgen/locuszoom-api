@@ -3,6 +3,7 @@ from flask import Flask
 from flask.ext.cors import CORS
 from flask.ext.cache import Cache
 from flask.json import JSONEncoder
+from raven.contrib.flask import Sentry
 
 # Create flask app
 app = Flask(__name__)
@@ -38,5 +39,8 @@ cache = Cache(
   app,
   config = app.config["CACHE_CONFIG"]
 )
+
+# Start logging errors
+sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
 
 from portalapi.controllers import routes
