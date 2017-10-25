@@ -70,26 +70,21 @@ def handle_all(error):
   print("Exception thrown while handling request: " + request.url)
   traceback.print_exc()
 
+  if isinstance(error,ParseException):
+    message = "Incorrect syntax in filter string, error was: " + error.msg
+    code = 400
+  elif isinstance(error,FlaskException):
+    message = error.message
+    code = error.status_code
+  else:
+    message = "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues"
+    code = 500
+
   response = jsonify({
-    "message": "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues",
+    "message": message,
     "request": request.url
   })
-  response.status_code = 500
-  return response
-
-@app.errorhandler(FlaskException)
-def handle_exception(error):
-  response = jsonify(error.to_dict())
-  response.status_code = error.status_code
-  return response
-
-@app.errorhandler(ParseException)
-def handle_parse_error(error):
-  response = jsonify({
-    "message": "Incorrect syntax in filter string, error was: " + error.msg
-  })
-
-  response.status_code = 400
+  response.status_code = code
   return response
 
 @app.before_request
