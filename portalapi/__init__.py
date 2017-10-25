@@ -41,6 +41,10 @@ cache = Cache(
 )
 
 # Start logging errors
-sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
+sentry = None
+if "SENTRY_DSN" in app.config:
+  sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
+else:
+  print "Warning: Sentry DSN not found, skipping"
 
 from portalapi.controllers import routes

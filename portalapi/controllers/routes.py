@@ -59,7 +59,8 @@ def handle_all(error):
   # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
   # these exceptions in the jenkins console)
   if mode != "jenkins":
-    sentry.captureException()
+    if sentry is not None:
+      sentry.captureException()
 
   # If we're in debug mode, re-raise the exception so we get the
   # browser debugger
