@@ -266,7 +266,7 @@ def rows_to_arrays(cur, fields, cols_to_field):
         for k, v in val.iteritems():
           if k not in data:
             data[k] = [None] * i
-            data[k].append(v)
+          data[k].append(v)
       else:
         data.setdefault(field,[]).append(row[col])
   if not data:
