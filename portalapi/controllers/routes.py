@@ -144,7 +144,12 @@ class JSONFloat(float):
   def __repr__(self):
     return "%0.2g" % self
 
-def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
+def std_response(db_table,
+                 db_cols,
+                 field_to_cols=None,
+                 return_json=True,
+                 return_format=None,
+                 limit=None):
   """
   Standard API response for simple cases of executing a filter against a single
   database table.
@@ -229,7 +234,7 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
   elif return_format == "objects" or format_str == "objects":
     style = "objects"
 
-  data = reshape_data(cur, fields, field_to_cols, style)
+  data = reshape_data(cur, fields, field_to_cols=field_to_cols, style=style)
 
   if return_json:
     return jsonify({
@@ -263,10 +268,13 @@ def rows_to_arrays(cur, fields, cols_to_field):
       field = cols_to_field.get(col, col)
       val = row[col]
       if isinstance(val, dict):
+        # Unpack JSON fields in database: each field entry should become a top-level column
         for k, v in val.iteritems():
           if k not in data:
+            # Populate a default array where all preceding entries are blank
             data[k] = [None] * i
-            data[k].append(v)
+          # Assumption: every record fetched will have JSON objects with the same keys (otherwise final lengths won't match)
+          data[k].append(v)
       else:
         data.setdefault(field,[]).append(row[col])
   if not data:
@@ -400,7 +408,7 @@ def interval_results():
     chromosome = "chrom"
   )
 
-  return std_response(db_table,db_cols,field_to_col)
+  return std_response(db_table, db_cols, field_to_cols=field_to_col)
 
 @app.route(
   "/v{}/annotation/snps/".format(app.config["API_VERSION"]),
@@ -425,7 +433,7 @@ def snps_results():
     chromosome = "chrom"
   )
 
-  return std_response(db_table,db_cols,field_to_col)
+  return std_response(db_table,db_cols, field_to_cols=field_to_col)
 
 
 @app.route(
@@ -446,7 +454,7 @@ def single():
     date = "pubdate"
   )
 
-  return std_response(db_table,db_cols,field_to_col)
+  return std_response(db_table, db_cols, field_to_cols=field_to_col)
 
 @app.route(
   "/v{}/statistic/single/results/".format(app.config["API_VERSION"]),
@@ -477,7 +485,7 @@ def single_results():
   except:
     raise FlaskException("Invalid limit parameter, must be integer",400)
 
-  return std_response(db_table,db_cols,field_to_col,limit=limit)
+  return std_response(db_table,db_cols,field_to_cols=field_to_col,limit=limit)
 
 @app.route(
   "/v{}/statistic/phewas/".format(app.config["API_VERSION"]),
