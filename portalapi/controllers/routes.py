@@ -229,7 +229,7 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
   elif return_format == "objects" or format_str == "objects":
     style = "objects"
 
-  data = reshape_data(cur, fields, field_to_cols, style)
+  data = reshape_data(cur,fields,field_to_cols,style)
 
   if return_json:
     return jsonify({
@@ -239,57 +239,57 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
   else:
     return data
 
-def reshape_data(rows, fields, field_to_cols=None, style="table"):
-
+def reshape_data(rows,fields,field_to_cols=None,style="table"):
   # We may need to translate db columns --> field names.
   if field_to_cols is not None:
     cols_to_field = {v: k for k, v in field_to_cols.iteritems()}
   else:
     cols_to_field = {v: v for v in fields}
 
-  if style=="objects":
-    data = rows_to_objects(rows, fields, cols_to_field) 
+  if style == "objects":
+    data = rows_to_objects(rows,fields,cols_to_field)
   else: #assume style = "table"
-    data = rows_to_arrays(rows, fields, cols_to_field)
+    data = rows_to_arrays(rows,fields,cols_to_field)
 
-  return data 
+  return data
 
-
-def rows_to_arrays(cur, fields, cols_to_field):
+def rows_to_arrays(cur,fields,cols_to_field):
   data = OrderedDict()
   for i, row in enumerate(cur):
     for col in fields:
       # Some of the database column names don't match field names.
-      field = cols_to_field.get(col, col)
+      field = cols_to_field.get(col,col)
       val = row[col]
-      if isinstance(val, dict):
+      if isinstance(val,dict):
         for k, v in val.iteritems():
           if k not in data:
             data[k] = [None] * i
           data[k].append(v)
       else:
         data.setdefault(field,[]).append(row[col])
+
   if not data:
     #No data was found so fill with empty arrays
     for col in fields:
       data[col] = []
+
   return data
 
-def rows_to_objects(cur, fields, cols_to_field):
-    data = []
-    for row in cur:
-      rowdict = dict(row)
-      finaldict = dict()
+def rows_to_objects(cur,fields,cols_to_field):
+  data = []
+  for row in cur:
+    rowdict = dict(row)
+    finaldict = dict()
 
-      # User may have requested only certain fields
-      for col in fields:
-        # Translate from database column to field name
-        field = cols_to_field.get(col, col)
-        finaldict[field] = rowdict[col]
+    # User may have requested only certain fields
+    for col in fields:
+      # Translate from database column to field name
+      field = cols_to_field.get(col,col)
+      finaldict[field] = rowdict[col]
 
-      data.append(finaldict)
-    return data
-    
+    data.append(finaldict)
+
+  return data
 
 @app.route("/status",methods = ["GET"])
 def status():
@@ -321,7 +321,6 @@ def recomb():
 
   return std_response(db_table,db_cols)
 
-  
 @app.route(
   "/v{}/annotation/recomb/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
@@ -329,7 +328,7 @@ def recomb():
 def recomb_results():
   # Database columns and table
   db_table = "rest.recomb_results"
-  db_cols = ["id", "chromosome", "position", "recomb_rate", "pos_cm"]
+  db_cols = ["id","chromosome","position","recomb_rate","pos_cm"]
 
   filter_str = request.args.get("filter")
   fp = FilterParser()
@@ -337,12 +336,12 @@ def recomb_results():
   lrm = fp.left_middle_right(matches)
 
   sql_complier = SQLCompiler()
-  def fetch(terms, limit=None):
-    sql, params = sql_complier.to_sql_parsed(terms, db_table, db_cols, limit=limit)
+  def fetch(terms,limit=None):
+    sql, params = sql_complier.to_sql_parsed(terms,db_table,db_cols,limit=limit)
     rows = g.db.execute(text(sql),params).fetchall()
     return rows
-  
-  def interp(at, left, right):
+
+  def interp(at,left,right):
     if left is None or right is None:
         return None
     left_at = left["position"]
@@ -358,21 +357,21 @@ def recomb_results():
   right =  fetch(lrm["right"], 1)
   middle = fetch(lrm["middle"])
 
-  if len(left)<1:
-    left = [{"id": "chrleft", "position": lrm["range"]["left"], 
+  if len(left) < 1:
+    left = [{"id": "chrleft", "position": lrm["range"]["left"],
         "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
-  if len(right)<1:
-    right = [{"id": "chrright", "position": lrm["range"]["right"], 
+  if len(right) < 1:
+    right = [{"id": "chrright", "position": lrm["range"]["right"],
         "chromosome": lrm["range"]["chrom"], "recomb_rate": 0, "pos_cm": 0}]
-  
-  if len(middle)>0:
-    left_end = interp(lrm["range"]["left"], left[0], middle[0])
-    right_end = interp(lrm["range"]["right"], middle[-1], right[0])
-  else:
-    left_end = interp(lrm["range"]["left"], left[0], right[0])
-    right_end = interp(lrm["range"]["right"], left[0], right[0])
 
-  data = reshape_data([left_end] + middle + [right_end], db_cols)
+  if len(middle) > 0:
+    left_end = interp(lrm["range"]["left"],left[0],middle[0])
+    right_end = interp(lrm["range"]["right"],middle[-1],right[0])
+  else:
+    left_end = interp(lrm["range"]["left"],left[0],right[0])
+    right_end = interp(lrm["range"]["right"],left[0],right[0])
+
+  data = reshape_data([left_end] + middle + [right_end],db_cols)
   return jsonify({
     "data": data,
     "lastPage": None
@@ -416,7 +415,6 @@ def snps():
   "/v{}/annotation/snps/results/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
-
 def snps_results():
   db_table = "rest.dbsnp_snps"
   db_cols = "id rsid chrom pos ref alt".split()
@@ -426,7 +424,6 @@ def snps_results():
   )
 
   return std_response(db_table,db_cols,field_to_col)
-
 
 @app.route(
   "/v{}/statistic/single/".format(app.config["API_VERSION"]),
