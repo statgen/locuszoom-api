@@ -562,6 +562,12 @@ def ld_results():
   # attached to build, reference panel, and population all at the same time.
   # In the future, it will hopefully expand to accepting paramters for all 3, and
   # then we can include this in the cache key.
+  if "variant1" not in param_dict:
+    raise FlaskException("Must provide variant1 in filter",400)
+
+  if "reference" not in param_dict:
+    raise FlaskException("Must provide reference in filter",400)
+
   refvariant = param_dict["variant1"]["eq"][0]
   reference = param_dict["reference"]["eq"][0]
   refpos = int(refvariant.split("_")[0].split(":")[1])
