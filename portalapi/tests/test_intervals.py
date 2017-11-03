@@ -22,7 +22,8 @@ def test_intervals(host,port):
   assert len(data) > 0
 
   # Check format
-  for key in ("chromosome","end","id","public_id","start","strand","state_id","state_name"):
+  columns = ("chromosome","end","id","public_id","start","strand","state_id","state_name")
+  for key in columns:
     assert key in data
 
   assert isinstance(data["chromosome"][0],string_types)
@@ -59,3 +60,7 @@ def test_intervals(host,port):
 
   assert all(map(check_pos,data["start"]))
   assert all(map(check_pos,data["end"]))
+
+  # Check that all vectors are same length
+  assert len(set(map(len,data.values()))) == 1
+
