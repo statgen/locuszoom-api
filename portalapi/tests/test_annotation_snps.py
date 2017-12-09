@@ -13,7 +13,7 @@ def test_annotation_snps(host,port):
   assert resp.ok
 
   data = resp.json()
-  assert len(data["data"]["id"]) > 1
+  assert len(data["data"]["id"]) >= 1
 
   test_id = data["data"]["id"][0]
   params = {
