@@ -723,12 +723,16 @@ def genes():
 
   # Now retrieve transcripts/exons
   cols = "id feature_type gene_id chrom start end strand transcript_id exon_id".split()
-  sql_stmt, sql_params = sql_compiler.to_sql(orig_filter,db_table,db_cols,cols,None,field_to_col)
-  sql_stmt += " AND (feature_type = 'transcript' OR feature_type = 'exon') order by case feature_type when 'transcript' then 1 when 'exon' then 2 else 3 end"
-
   trans_keys = "transcript_id chrom start end strand".split()
   exon_keys = "exon_id chrom start end strand".split()
   dtranscripts = {}
+
+  sql_stmt = (
+    "SELECT {} from {} "
+    "WHERE gene_id IN :p1 AND feature_type IN ('transcript','exon') "
+    "ORDER BY CASE feature_type WHEN 'transcript' THEN 1 WHEN 'exon' THEN 2 ELSE 3 END "
+  ).format(",".join(map(sql_compiler.quote_keywords,cols)),db_table)
+  sql_params = {"p1": tuple(dgenes.keys())}
   cur = g.db.execute(text(sql_stmt),sql_params)
   for row in cur:
     rowd = dict(zip(cols,row))

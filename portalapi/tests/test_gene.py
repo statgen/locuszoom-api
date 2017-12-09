@@ -55,4 +55,36 @@ def test_gene(host,port):
       assert isinstance(tx["end"],int)
       assert isinstance(tx["start"],int)
       assert tx["strand"] in ("+","-")
+      assert len(tx["exons"]) > 0
+
+def test_wwox(host,port):
+  """
+  This region perfectly excludes all of the exons of 1 transcript of WWOX
+  Previously this caused an error because locuszoom expects all transcripts returned
+  to have at least one exon
+
+  16:78189937-79189937
+  """
+
+  params = {
+    "filter": "source in 2 and chrom eq '16' and start le 79189937 and end ge 78189937"
+  }
+  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
+  assert resp.ok
+
+  js = resp.json()
+
+  assert len(js["data"]) > 0
+
+  for gene in js["data"]:
+    for tx in gene["transcripts"]:
+      for key in ("chrom","end","exons","start","strand","transcript_id"):
+        assert key in tx
+
+      assert isinstance(tx["transcript_id"],string_types)
+      assert isinstance(tx["chrom"],string_types)
+      assert isinstance(tx["end"],int)
+      assert isinstance(tx["start"],int)
+      assert tx["strand"] in ("+","-")
+      assert len(tx["exons"]) > 0
 
