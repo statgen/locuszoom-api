@@ -727,12 +727,20 @@ def genes():
   exon_keys = "exon_id chrom start end strand".split()
   dtranscripts = {}
 
+  fp = FilterParser()
+  sources = fp.statements(orig_filter)["source"].value
+
   sql_stmt = (
     "SELECT {} from {} "
-    "WHERE gene_id IN :p1 AND feature_type IN ('transcript','exon') "
+    "WHERE id in :p1 AND gene_id IN :p2 AND feature_type IN ('transcript','exon') "
     "ORDER BY CASE feature_type WHEN 'transcript' THEN 1 WHEN 'exon' THEN 2 ELSE 3 END "
   ).format(",".join(map(sql_compiler.quote_keywords,cols)),db_table)
-  sql_params = {"p1": tuple(dgenes.keys())}
+
+  sql_params = {
+    "p1": tuple(sources),
+    "p2": tuple(dgenes.keys()),
+  }
+
   cur = g.db.execute(text(sql_stmt),sql_params)
   for row in cur:
     rowd = dict(zip(cols,row))
