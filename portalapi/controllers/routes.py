@@ -456,7 +456,7 @@ def single():
 )
 def single_results():
   db_table = "rest.assoc_results"
-  db_cols = "id variant_name chrom pos ref_allele ref_freq log_pvalue score_stat".split()
+  db_cols = "id variant_name chrom pos ref_allele ref_freq log_pvalue beta se score_stat".split()
 
   field_to_col = dict(
     analysis = "id",
