@@ -19,6 +19,7 @@ import traceback
 import gzip
 import time
 import math
+import re
 
 START_TIME = time.time()
 
@@ -82,9 +83,21 @@ def handle_all(error):
     message = "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues"
     code = 500
 
+  # A little extra work to figure out the true request URL.
+  # Requires the following set in apache:
+  #   SetEnvIf Request_URI "^(.*)$" REQUEST_URI=$1
+  #   RequestHeader set X-Request-Uri "%{REQUEST_URI}e"
+  full_url = request.url
+  real_uri = request.headers.get("X-Request-Uri")
+  if real_uri is not None:
+    match = re.search("\/(?P<api>\w+)\/(?P<version>v\d+)",real_uri)
+    if match:
+      api_name, api_version = match.groups()
+      full_url = full_url.replace("/" + api_version,"/" + api_name + "/" + api_version)
+
   response = jsonify({
     "message": message,
-    "request": request.url
+    "request": full_url
   })
   response.status_code = code
   return response
