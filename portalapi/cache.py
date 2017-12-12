@@ -154,6 +154,12 @@ class RedisIntervalCache(IntervalCache):
     itree = loads(self.red.hget(key,"itree"))
     zset = self.red.hget(key,"zset")
 
+    if not self.red.exists(zset):
+      # The sorted set was evicted by the LRU mechanism
+      # but the master/interval key was not
+      self.red.delete(key)
+      return None
+
     interval = Interval(start,end)
     if not interval_contained(itree,interval) and not force_subinterval:
       # If the region previously calculated is too small, and we're not forcing

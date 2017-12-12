@@ -666,13 +666,15 @@ def ld_results():
       (dict((x,d[x]) for x in keep) for d in ld_json["pairs"])
     ))
 
-    try:
-      ld_cache.store(cache_key,start,end,for_cache)
-    except redis.ConnectionError:
-      print "Warning: cache storage failed (redis was unable to connect)"
-    except:
-      print "Error: storing data in cache failed, traceback was: "
-      traceback.print_exc()
+    if len(for_cache) > 0:
+      # If we actually received LD data for this variant, store it in the cache.
+      try:
+        ld_cache.store(cache_key,start,end,for_cache)
+      except redis.ConnectionError:
+        print "Warning: cache storage failed (redis was unable to connect)"
+      except:
+        print "Error: storing data in cache failed, traceback was: "
+        traceback.print_exc()
 
   else:
     print "Cache *match* for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), using cached data".format(
