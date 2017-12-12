@@ -57,6 +57,21 @@ def test_gene(host,port):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
+def test_no_genes(host,port):
+  """
+  Test region that should contain no genes
+  """
+
+  params = {
+    "filter": "source in 2 and chrom eq '16' and start le 54265502 and end ge 54164840"
+  }
+  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
+  assert resp.ok
+
+  js = resp.json()
+
+  assert len(js["data"]) == 0
+
 def test_wwox(host,port):
   """
   This region perfectly excludes all of the exons of 1 transcript of WWOX

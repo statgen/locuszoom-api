@@ -737,55 +737,57 @@ def genes():
     genes_arr.append(gene)
 
   # Now retrieve transcripts/exons
-  cols = "id feature_type gene_id chrom start end strand transcript_id exon_id".split()
-  trans_keys = "transcript_id chrom start end strand".split()
-  exon_keys = "exon_id chrom start end strand".split()
-  dtranscripts = {}
+  # Only retrieve if there were genes found in the region
+  if len(genes_arr) > 0:
+    cols = "id feature_type gene_id chrom start end strand transcript_id exon_id".split()
+    trans_keys = "transcript_id chrom start end strand".split()
+    exon_keys = "exon_id chrom start end strand".split()
+    dtranscripts = {}
 
-  fp = FilterParser()
-  sources = fp.statements(orig_filter)["source"].value
+    fp = FilterParser()
+    sources = fp.statements(orig_filter)["source"].value
 
-  sql_stmt = (
-    "SELECT {} from {} "
-    "WHERE id in :p1 AND gene_id IN :p2 AND feature_type IN ('transcript','exon') "
-    "ORDER BY CASE feature_type WHEN 'transcript' THEN 1 WHEN 'exon' THEN 2 ELSE 3 END "
-  ).format(",".join(map(sql_compiler.quote_keywords,cols)),db_table)
+    sql_stmt = (
+      "SELECT {} from {} "
+      "WHERE id in :p1 AND gene_id IN :p2 AND feature_type IN ('transcript','exon') "
+      "ORDER BY CASE feature_type WHEN 'transcript' THEN 1 WHEN 'exon' THEN 2 ELSE 3 END "
+    ).format(",".join(map(sql_compiler.quote_keywords,cols)),db_table)
 
-  sql_params = {
-    "p1": tuple(sources),
-    "p2": tuple(dgenes.keys()),
-  }
+    sql_params = {
+      "p1": tuple(sources),
+      "p2": tuple(dgenes.keys()),
+    }
 
-  cur = g.db.execute(text(sql_stmt),sql_params)
-  for row in cur:
-    rowd = dict(zip(cols,row))
+    cur = g.db.execute(text(sql_stmt),sql_params)
+    for row in cur:
+      rowd = dict(zip(cols,row))
 
-    if rowd["feature_type"] == "transcript":
-      tx_id = row["transcript_id"]
-      gene_id = row["gene_id"]
-      chrom = row["chrom"]
+      if rowd["feature_type"] == "transcript":
+        tx_id = row["transcript_id"]
+        gene_id = row["gene_id"]
+        chrom = row["chrom"]
 
-      transcript = dtranscripts.get(tx_id,None)
-      if transcript is None:
-        transcript_data = {k: rowd[k] for k in trans_keys}
-        transcript = Transcript(**transcript_data)
-        dtranscripts[tx_id] = transcript
-        dgenes[gene_id].add_transcript(transcript)
+        transcript = dtranscripts.get(tx_id,None)
+        if transcript is None:
+          transcript_data = {k: rowd[k] for k in trans_keys}
+          transcript = Transcript(**transcript_data)
+          dtranscripts[tx_id] = transcript
+          dgenes[gene_id].add_transcript(transcript)
 
-    elif rowd["feature_type"] == "exon":
-      gene_id = row["gene_id"]
-      tx_id = row["transcript_id"]
-      exon_id = row["exon_id"]
-      exon_data = {k: rowd[k] for k in exon_keys}
-      exon = Exon(**exon_data)
+      elif rowd["feature_type"] == "exon":
+        gene_id = row["gene_id"]
+        tx_id = row["transcript_id"]
+        exon_id = row["exon_id"]
+        exon_data = {k: rowd[k] for k in exon_keys}
+        exon = Exon(**exon_data)
 
-      gene = dgenes.get(gene_id)
-      if gene is not None:
-        gene.add_exon(exon)
+        gene = dgenes.get(gene_id)
+        if gene is not None:
+          gene.add_exon(exon)
 
-      transcript = dtranscripts.get(tx_id)
-      if transcript is not None:
-        transcript.add_exon(exon)
+        transcript = dtranscripts.get(tx_id)
+        if transcript is not None:
+          transcript.add_exon(exon)
 
   json_genes = [gene.to_dict() for gene in genes_arr]
 
