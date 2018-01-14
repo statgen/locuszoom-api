@@ -738,7 +738,8 @@ def genes():
 
   # Now retrieve transcripts/exons
   # Only retrieve if there were genes found in the region
-  if len(genes_arr) > 0:
+  skip_transcripts = request.args.get("transcripts","").lower() in ("f","false","no")
+  if not skip_transcripts and len(genes_arr) > 0:
     cols = "id feature_type gene_id chrom start end strand transcript_id exon_id".split()
     trans_keys = "transcript_id chrom start end strand".split()
     exon_keys = "exon_id chrom start end strand".split()
