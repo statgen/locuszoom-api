@@ -103,3 +103,22 @@ def test_wwox(host,port):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
+def test_skip_transcripts(host,port):
+  """
+  Make sure gene query honors transcripts=F
+  """
+
+  params = {
+    "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060",
+    "transcripts": "F"
+  }
+  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
+  assert resp.ok
+
+  js = resp.json()
+
+  assert len(js["data"]) > 0
+  for gene in js["data"]:
+    assert "transcripts" not in gene
+    assert "exons" not in gene
+
