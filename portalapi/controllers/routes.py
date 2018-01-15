@@ -825,20 +825,33 @@ def omnisearch():
         if build_id is None:
             x["error"] = "Genes not available for build"
             return x
+
         filter_str = " and ".join([f for f in [filter_str, "source_id eq {}".format(build_id)] if len(f)>0])
+        filter_str += " and feature_type eq 'gene'"
+
         sql_complier = SQLCompiler()
-        fields = ["source_id", "chromosome", "gene_name", "gene_id", "interval_start", "interval_end"]
-        db_table = "rest.genes"
-        sort_fields = ["chromosome","interval_start"]
-        db_cols = "source_id gene_id gene_name chromosome interval_start interval_end strand".split()
-        sql, params = sql_complier.to_sql(filter_str, db_table, db_cols, fields, sort_fields, None)
+        db_table = "rest.gene_data"
+
+        ok_fields = "id gene_id gene_name chrom start end strand feature_type".split()
+        db_cols = "id chrom gene_name gene_id start end".split()
+
+        sort_fields = ["chrom","start"]
+        fields_to_col = {
+          "source_id": "id",
+          "chromosome": "chrom",
+          "interval_start": "start",
+          "interval_end": "end"
+        }
+
+        sql, params = sql_complier.to_sql(filter_str, db_table, ok_fields, db_cols, sort_fields, fields_to_col, None)
         cur = g.db.execute(text(sql), params)
+
         results = cur.fetchmany(2)
         if len(results)==1:
             row = results[0]
-            x["chrom"] = row["chromosome"]
-            x["start"] = row["interval_start"] - x.get("offset", 0)
-            x["end"] = row["interval_end"] + x.get("offset", 0)
+            x["chrom"] = row["chrom"]
+            x["start"] = row["start"] - x.get("offset", 0)
+            x["end"] = row["end"] + x.get("offset", 0)
             x["gene_name"] = row["gene_name"]
             x["gene_id"] = row["gene_id"]
             del x["q"]
