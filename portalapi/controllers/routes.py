@@ -439,6 +439,26 @@ def snps_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @app.route(
+  "/v{}/annotation/gwascatalog/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def gwascat():
+  db_table = "rest.gwascat_master"
+  db_cols = "id name genome_build date_inserted catalog_version".split()
+
+  return std_response(db_table,db_cols)
+
+@app.route(
+  "/v{}/annotation/gwascatalog/results/".format(app.config["API_VERSION"]),
+  methods = ["GET"]
+)
+def gwascat_results():
+  db_table = "rest.gwascat_data"
+  db_cols = "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split()
+
+  return std_response(db_table,db_cols)
+
+@app.route(
   "/v{}/statistic/single/".format(app.config["API_VERSION"]),
   methods = ["GET"]
 )
