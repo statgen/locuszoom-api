@@ -118,6 +118,8 @@ Relative Resource URI | Description
 /annotation/genes/sources/ | Collection of all available gene annotation resources.
 /annotation/genes/ | Collection of all annotated genes.
 /annotation/genes/names/ | Collection of all gene/transcript/exon names.
+/annotation/gwascatalog/ | Collection of GWAS catalogs
+/annotation/gwascatalog/results/ | Collection of GWAS catalogs
 
 # API endpoints
 
@@ -1156,3 +1158,181 @@ name startswith ‘TCF’, ‘ENSG00001’, ‘ENSG’ | Selects all gene_id, ge
 #### SORT
 
 Not yet implemented
+
+## GWAS Catalogs
+
+### List all available GWAS catalogs
+
+We currently support the EBI GWAS catalog, and the UK BioBank GWAS hits.
+
+`GET /annotation/gwascatalog/`
+
+> Example: retrieve all GWAS catalogs
+
+```shell
+curl "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/"
+```
+
+```json
+{
+  "data": {
+    "catalog_version": [
+      "e91_r2018-03-13",
+      "e91_r2018-03-13"
+    ],
+    "date_inserted": [
+      "2018-03-18T17:20:40-04:00",
+      "2018-03-18T17:20:40-04:00"
+    ],
+    "genome_build": [
+      "GRCh38",
+      "GRCh37"
+    ],
+    "id": [
+      1,
+      2
+    ],
+    "name": [
+      "EBI GWAS Catalog",
+      "EBI GWAS Catalog"
+    ]
+  },
+  "lastPage": null
+}
+```
+
+> Or alternatively in object mode:
+
+```shell
+curl "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/?format=objects"
+```
+
+```json
+{
+  "data": [
+    {
+      "catalog_version": "e91_r2018-03-13",
+      "date_inserted": "2018-03-18T17:20:40-04:00",
+      "genome_build": "GRCh38",
+      "id": 1,
+      "name": "EBI GWAS Catalog"
+    },
+    {
+      "catalog_version": "e91_r2018-03-13",
+      "date_inserted": "2018-03-18T17:20:40-04:00",
+      "genome_build": "GRCh37",
+      "id": 2,
+      "name": "EBI GWAS Catalog"
+    }
+  ],
+  "lastPage": null
+}
+```
+
+#### FIELDS
+
+Field | Description
+----- | -----------
+id | Unique ID assigned to each GWAS catalog
+name | Name of the catalog, e.g. "EBI" or "UKBB"
+genome_build | Positions in the catalog are anchored to this build
+catalog_version | Version of the GWAS catalog (varies by catalog)
+date_inserted | Date the GWAS catalog was inserted into the database
+
+### Retrieve variants from one or multiple GWAS catalogs
+
+`GET /annotation/gwascatalog/results/`
+
+> Retrieve all known disease/trait associated variants within a genomic region for a specific catalog
+
+Understanding the format is easier in object mode, so we use that below.
+
+```shell
+curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and chrom eq '10' and pos le 112998595 and pos ge 112998585"
+```
+
+```json
+{
+  "data": [
+    {
+      "alt": "T",
+      "chrom": "10",
+      "first_author": "Sladek R",
+      "genes": "TCF7L2",
+      "id": 1,
+      "log_pvalue": 33.7,
+      "or_beta": 1.65,
+      "pmid": "17293876",
+      "pos": 112998590,
+      "pubdate": "2007-02-11",
+      "ref": "C",
+      "risk_allele": "T",
+      "risk_frq": 0.3,
+      "rsid": "rs7903146",
+      "study": "A genome-wide association study identifies novel risk loci for type 2 diabetes.",
+      "trait": "Type 2 diabetes",
+      "trait_group": "Type 2 diabetes",
+      "variant": "10:112998590_C/T"
+    },
+    {
+      ...
+    }
+  ]
+}
+```
+
+One record is returned per variant * trait * pmid. The same variant <--> trait association can be reported in multiple publications.
+
+> Retrieve associations for a specific variant
+
+> You should use a catalog that is anchored to the same genome build as your variant (since it contains a position.)
+> For example, `10:112998590_C/T` is rs7903146 in GRCh38, but `10:114758349_C/T` in GRCh37.
+> In this example, assume the GWAS catalog with ID 1 is a GRCh38 catalog.
+
+```shell
+curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and variant eq '10:112998590_C/T'"
+```
+
+> You can also retrieve by rsID instead of a variant:
+
+```shell
+curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and rsid eq 'rs7903146'"
+```
+
+#### FIELDS
+
+Field | Description
+----- | -----------
+id | GWAS catalog ID
+variant | Variant in chr:pos_ref/alt format
+rsid | rsID of the variant
+chrom | Chromosome
+pos | Position
+ref | Reference allele
+alt | Alternate allele
+trait | Name of the trait/phenotype/disease
+trait_group | Grouping of traits as defined by the catalog
+risk_allele | Specifies allele for effect direction and risk frequency
+risk_frq | Frequency of risk allele
+log_pvalue | -log10 p-value for association between variant and trait
+or_beta | Effect size (or odds ratio if binary trait)
+pmid | PubMed ID for the publication reporting this association
+first_author | First author of the publication reporting this association
+
+#### FILTERS
+
+Filter | Description
+------ | -----------
+id in 1, 3, 6 | Selects GWAS catalogs by their IDs
+chrom eq '6' | Select only variants on a particular chromosome
+pos ge 1 | Select only variants with position greater than or equal to a value
+pos le 10 | Select only variants with position less than or equal to a value
+pos gt 1 | Select only variants with position greater than a value
+pos lt 10 | Select only variants with position less than a value
+variant eq '10:112998590_C/T' | Select a particular variant
+rsid eq 'rs7903146' | Select a variant by rsID
+
+#### SORT
+
+Return sorted results by including the `sort=field` parameter. Probably the most common would be to sort by log p-value, for example `sort=log_pvalue`.
+
