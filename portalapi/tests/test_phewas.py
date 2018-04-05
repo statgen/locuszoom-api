@@ -24,3 +24,8 @@ def test_phewas(host,port):
     assert k in data["data"]
     assert len(data["data"][k]) > 1
 
+  # PheWAS plots will not function without a trait label or group
+  # Datasets without a trait group or label should not be returned by the API endpoint
+  assert all(x is not None for x in data["data"]["trait_group"])
+  assert all(x is not None for x in data["data"]["trait_label"])
+

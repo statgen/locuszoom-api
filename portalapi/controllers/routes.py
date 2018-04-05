@@ -540,7 +540,10 @@ def phewas():
     FROM rest.assoc_master sa
       JOIN rest.assoc_results sr ON sa.id = sr.id
       LEFT JOIN rest.traits ON sa.trait = traits.trait
-    WHERE variant_name = :vname AND sa.build = ANY(:builds)
+    WHERE variant_name = :vname
+      AND sa.build = ANY(:builds)
+      AND traits.grouping IS NOT NULL
+      AND traits.label IS NOT NULL
     ORDER BY log_pvalue DESC;
   """
 
