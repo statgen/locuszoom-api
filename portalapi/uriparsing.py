@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas, ParseResults
+from pyparsing import Combine, Word, Literal, Optional, oneOf, Group, ZeroOrMore, Suppress, quotedString, removeQuotes, alphanums, nums, alphas, ParseResults, StringEnd
 from collections import namedtuple
 
 class InvalidFieldException(Exception):
@@ -48,7 +48,7 @@ class FilterParser(object):
       lhs + comp + rhs
     ).setResultsName("statement")
 
-    expr = stmt + ZeroOrMore(op + stmt)
+    expr = stmt + ZeroOrMore(op + stmt) + StringEnd()
 
     self.grammar = expr
 
