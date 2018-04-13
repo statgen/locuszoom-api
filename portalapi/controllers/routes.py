@@ -282,9 +282,10 @@ def rows_to_arrays(cur,fields,cols_to_field):
         data.setdefault(field,[]).append(row[col])
 
   if not data:
-    #No data was found so fill with empty arrays
-    for col in fields:
-      data[col] = []
+    # No data was found so fill with empty arrays
+    db_cols = cur.keys()
+    for col in db_cols:
+      data[cols_to_field.get(col,col)] = []
 
   return data
 

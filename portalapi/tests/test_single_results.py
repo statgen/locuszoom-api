@@ -30,4 +30,17 @@ def test_statistic_single_results(host,port):
   for k in ("analysis","chromosome","log_pvalue","position","ref_allele","ref_allele_freq","score_test_stat","variant"):
     assert k in result_data["data"]
 
+def test_empty_region(host,port):
+  params = {
+    "filter": "analysis in 45 and chromosome in '2' and position ge 242023897 and position le 242025881"
+  }
+
+  results = requests.get("http://{}:{}/v1/statistic/single/results/".format(host,port),params=params)
+  assert results.ok
+
+  data = results.json()["data"]
+  for k in ("analysis","chromosome","log_pvalue","position","ref_allele","ref_allele_freq","score_test_stat","variant","beta","se"):
+    assert k in data
+    assert isinstance(data[k],list)
+    assert len(data[k]) == 0
 
