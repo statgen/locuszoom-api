@@ -450,7 +450,8 @@ def phewas():
   if return_fmt not in ("table","objects"):
     raise FlaskException(400,"format must be either 'table' or 'objects'")
 
-  cur = g.db.execute(text(sql),{"vname": variant,"builds": builds})
+  cur = g.db.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+  cur.callproc("rest.phewas_query",[variant,builds])
   data = reshape_data(cur,db_cols,None,return_fmt)
   return jsonify({
     "meta": {
