@@ -162,7 +162,8 @@ json = response.json()
 
 Field | Description
 ----- | -----------
-analysis | Analysis unique identifier
+id | Analysis unique identifier
+analysis | Human-readable analysis label
 study | Study name
 trait | Trait name
 tech | Genotyping/sequencing technology
@@ -173,7 +174,7 @@ imputed | Reference panel used if data was imputed
 
 Filter | Description
 ------ | -----------
-analysis in 1,2,... | Selects set of analyses by unique ID
+id in 1,2,... | Selects set of analyses by unique ID
 
 #### SORT
 
