@@ -38,6 +38,7 @@ pipeline {
     stage('test') {
       steps {
         sh '''
+          export PORTALAPI_MODE="jenkins"
           export FLASK_HOST="127.0.0.1"
           export FLASK_PORT=`cat FLASK_PORT`
           testenv/bin/pytest --pyargs portalapi --junitxml report.xml
