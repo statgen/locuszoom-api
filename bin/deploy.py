@@ -55,13 +55,17 @@ def bash(cmd,check=True,wait=True,echo=True):
 if len(sys.argv) < 2:
   raise ValueError("Must pass in API mode to deploy script, e.g. prod or dev.")
 
-API_MODE = sys.argv[1]
+API_MODE = os.environ.get("PORTALAPI_MODE", sys.argv[1])
+API_HOME = os.environ.get("API_HOME")
 CFG = f"etc/config-{API_MODE}.py"
+
+if API_HOME is not None:
+  os.chdir(API_HOME)
 
 # Check for config file.
 # This also serves as a check that we are running from the proper working directory.
 if not os.path.isfile(CFG):
-  raise ValueError(f"Could not find config {CFG}. Make sure you are executing this script at the root of the API home directory.")
+  raise ValueError(f"Could not find config {CFG}. Make sure you are executing this script at the root of the API home directory or set API_HOME.")
 
 # Import variables from config file, including:
 # API_VERSION

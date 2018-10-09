@@ -45,15 +45,16 @@ pipeline {
         '''
       }
     }
-    stage('deploy dev API') {
+    stage('deploy') {
       when {
         branch 'dev'
       }
 
       steps {
-        dir('/home/portaldev/lzapi_dev') {
-          sh 'sudo -H -u lzapi bin/deploy.py dev'
-        }
+        sh '''
+          export API_HOME="/home/portaldev/lzapi_dev"
+          sudo -H -u lzapi /home/portaldev/lzapi_dev/bin/deploy.py dev
+        '''
       }
     }
   }
