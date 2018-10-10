@@ -6,7 +6,7 @@ import os, sys, psutil, time
 
 def is_flask(proc):
   try:
-    return "PORTALAPI_MODE" in proc.environ() and len(proc.children()) > 0 and proc.name() == "gunicorn"
+    return "LZAPI_MODE" in proc.environ() and len(proc.children()) > 0 and proc.name() == "gunicorn"
   except:
     return False
 
@@ -45,7 +45,7 @@ def find_flask_servers():
   for p in psutil.process_iter():
     if is_flask(p):
       s = FlaskServerInfo(
-        p.environ()["PORTALAPI_MODE"],
+        p.environ()["LZAPI_MODE"],
         p.pid,
         p.ppid(),
         p.cwd(),

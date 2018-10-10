@@ -33,7 +33,7 @@ if __name__ == "__main__":
   # Set environment variable
   # This is needed by the gunicorn command, the flask app,
   # and the find/monitor server code
-  os.environ["PORTALAPI_MODE"] = mode
+  os.environ["LZAPI_MODE"] = mode
 
   # Load settings for this server mode
   # Importantly, FLASK_HOST and FLASK_PORT
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     """
 
     gunicorn -k gevent -w {workers} -b {host}:{port} 'locuszoom.api:create_app()' \
-      --access-logfile logs/gunicorn.${{PORTALAPI_MODE}}.access.log \
+      --access-logfile logs/gunicorn.${{LZAPI_MODE}}.access.log \
       --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" [reqtime: %(L)ss] -- %(U)s -- %(q)s' \
-      --error-logfile logs/gunicorn.${{PORTALAPI_MODE}}.error.log \
+      --error-logfile logs/gunicorn.${{LZAPI_MODE}}.error.log \
       --log-level info
 
     """.format(host=FLASK_HOST,port=FLASK_PORT,workers=WORKER_COUNT)

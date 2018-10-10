@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-os.environ["PORTALAPI_MODE"] = "quick"
+os.environ["LZAPI_MODE"] = "quick"
 
 import sys
 sys.path.insert(0,".")

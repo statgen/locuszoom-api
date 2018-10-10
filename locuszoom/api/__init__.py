@@ -18,9 +18,9 @@ def create_app():
   app = Flask(__name__)
 
   # Which config to use
-  mode = os.environ.get("PORTALAPI_MODE")
+  mode = os.environ.get("LZAPI_MODE")
   if mode is None:
-    raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
+    raise Exception("No API mode designated. Set the LZAPI_MODE environment variable to 'dev' or 'prod'")
 
   # Config file given mode
   config_file = os.path.join(app.root_path,"../../etc/config-{}.py".format(mode))

@@ -51,7 +51,7 @@ with open("webhook") as fp:
 
 def is_flask(proc):
   try:
-    return ("PORTALAPI_MODE" in proc.environ()) and (len(proc.children()) > 0)
+    return ("LZAPI_MODE" in proc.environ()) and (len(proc.children()) > 0)
   except:
     return False
 
@@ -130,7 +130,7 @@ def find_flask_servers():
   for p in psutil.process_iter():
     if is_flask(p):
       s = FlaskServerInfo(
-        p.environ()["PORTALAPI_MODE"],
+        p.environ()["LZAPI_MODE"],
         p.pid,
         p.cwd()
       )
@@ -208,7 +208,7 @@ def monitor_flask():
             "pid": p.pid,
             "cmdline": cmdline,
             "cwd": p.cwd(),
-            "api_mode": p.environ()["PORTALAPI_MODE"]
+            "api_mode": p.environ()["LZAPI_MODE"]
           }
 
     # Now check all flask instances that we're aware of

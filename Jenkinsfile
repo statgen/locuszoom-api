@@ -38,7 +38,7 @@ pipeline {
     stage('test') {
       steps {
         sh '''
-          export PORTALAPI_MODE="jenkins"
+          export LZAPI_MODE="jenkins"
           export FLASK_HOST="127.0.0.1"
           export FLASK_PORT=`cat FLASK_PORT`
           testenv/bin/pytest --pyargs locuszoom.api --junitxml report.xml
@@ -52,7 +52,7 @@ pipeline {
 
       steps {
         sh '''
-          export API_HOME="/home/portaldev/lzapi_dev"
+          export LZAPI_HOME="/home/portaldev/lzapi_dev"
           sudo -H -u lzapi /home/portaldev/lzapi_dev/bin/deploy.py dev
         '''
       }

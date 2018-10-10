@@ -5,7 +5,7 @@ from getpass import getuser
 def find_server(api_mode):
   for p in psutil.process_iter():
     try:
-      if p.name() == "gunicorn" and p.environ()["PORTALAPI_MODE"] == api_mode:
+      if p.name() == "gunicorn" and p.environ()["LZAPI_MODE"] == api_mode:
         return p.pid
     except:
       pass
@@ -55,17 +55,17 @@ def bash(cmd,check=True,wait=True,echo=True):
 if len(sys.argv) < 2:
   raise ValueError("Must pass in API mode to deploy script, e.g. prod or dev.")
 
-API_MODE = os.environ.get("PORTALAPI_MODE", sys.argv[1])
-API_HOME = os.environ.get("API_HOME")
-CFG = f"etc/config-{API_MODE}.py"
+LZAPI_MODE = os.environ.get("LZAPI_MODE", sys.argv[1])
+LZAPI_HOME = os.environ.get("LZAPI_HOME")
+CFG = f"etc/config-{LZAPI_MODE}.py"
 
-if API_HOME is not None:
-  os.chdir(API_HOME)
+if LZAPI_HOME is not None:
+  os.chdir(LZAPI_HOME)
 
 # Check for config file.
 # This also serves as a check that we are running from the proper working directory.
 if not os.path.isfile(CFG):
-  raise ValueError(f"Could not find config {CFG}. Make sure you are executing this script at the root of the API home directory or set API_HOME.")
+  raise ValueError(f"Could not find config {CFG}. Make sure you are executing this script at the root of the API home directory or set LZAPI_HOME.")
 
 # Import variables from config file, including:
 # API_VERSION
@@ -80,8 +80,8 @@ if getuser() != API_USER:
   raise ValueError(f"Must run deploy script as user {API_USER}")
 
 # Kill currently running server
-print(f"Killing current {API_MODE} server")
-pid = find_server(API_MODE)
+print(f"Killing current {LZAPI_MODE} server")
+pid = find_server(LZAPI_MODE)
 if pid is not None:
   kill_server(pid)
 
@@ -97,7 +97,7 @@ bash("source venv/bin/activate && pip install -r requirements.txt && pip install
 
 # Activate environment and run server
 print("Starting server")
-bash(f"source venv/bin/activate && bin/run_gunicorn.py {API_MODE}",wait=False)
+bash(f"source venv/bin/activate && bin/run_gunicorn.py {LZAPI_MODE}",wait=False)
 
 # Give the server reasonable amount of time to startup
 time.sleep(5)
