@@ -5,9 +5,6 @@ from flask.ext.cache import Cache
 from flask.json import JSONEncoder
 from raven.contrib.flask import Sentry
 
-# Create flask app
-app = Flask(__name__)
-
 # Modified JSON encoder to handle datetimes
 class CustomJSONEncoder(JSONEncoder):
   def default(self,x):
@@ -16,35 +13,45 @@ class CustomJSONEncoder(JSONEncoder):
 
     return JSONEncoder.default(self,x)
 
-app.json_encoder = CustomJSONEncoder
+def create_app():
+  # Create flask app
+  app = Flask(__name__)
 
-# Which config to use
-mode = os.environ.get("PORTALAPI_MODE")
-if mode is None:
-  raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
+  # Which config to use
+  mode = os.environ.get("PORTALAPI_MODE")
+  if mode is None:
+    raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
 
-# Config file given mode
-config_file = os.path.join(app.root_path,"../etc/config-{}.py".format(mode))
-if not os.path.isfile(config_file):
-  raise IOError("Could not find configuration file {} for API mode {}".format(config_file,mode))
+  # Config file given mode
+  config_file = os.path.join(app.root_path,"../etc/config-{}.py".format(mode))
+  if not os.path.isfile(config_file):
+    raise IOError("Could not find configuration file {} for API mode {}".format(config_file,mode))
 
-# Load config
-app.config.from_pyfile(config_file)
+  # Load config
+  app.config.from_pyfile(config_file)
 
-# Enable cross-domain headers on all routes
-CORS(app)
+  # Start logging errors
+  sentry = None
+  if "SENTRY_DSN" in app.config:
+    sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
+  else:
+    print "Warning: Sentry DSN not found, skipping"
 
-# Enable caching
-cache = Cache(
-  app,
-  config = app.config["CACHE_CONFIG"]
-)
+  # Enable cross-domain headers on all routes
+  CORS(app)
 
-# Start logging errors
-sentry = None
-if "SENTRY_DSN" in app.config:
-  sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
-else:
-  print "Warning: Sentry DSN not found, skipping"
+  # Enable caching
+  cache = Cache(
+    app,
+    config = app.config["CACHE_CONFIG"]
+  )
 
-from portalapi.controllers import routes
+  # Register routes with app
+  with app.app_context():
+    from portalapi.controllers import routes
+    app.register_blueprint(routes.bp)
+
+  # JSON encoder for datetimes
+  app.json_encoder = CustomJSONEncoder
+
+  return app

@@ -3,8 +3,7 @@ from cStringIO import StringIO as IO
 from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
-from flask import g, jsonify, request
-from portalapi import app, cache, sentry, mode
+from flask import g, jsonify, request, Blueprint, current_app
 from portalapi.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from portalapi.models.gene import Gene, Transcript, Exon
 from portalapi.cache import RedisIntervalCache
@@ -23,10 +22,12 @@ import re
 
 START_TIME = time.time()
 
+bp = Blueprint("routes", __name__)
+
 engine = create_engine(
-  URL(**app.config["DATABASE"]),
+  URL(**current_app.config["DATABASE"]),
   connect_args = dict(
-    application_name = app.config["DB_APP_NAME"]
+    application_name = current_app.config["DB_APP_NAME"]
   ),
   pool_size = 5,
   max_overflow = 0,
@@ -35,10 +36,14 @@ engine = create_engine(
 )
 
 redis_client = redis.StrictRedis(
-  host = app.config["REDIS_HOST"],
-  port = app.config["REDIS_PORT"],
-  db = app.config["REDIS_DB"]
+  host = current_app.config["REDIS_HOST"],
+  port = current_app.config["REDIS_PORT"],
+  db = current_app.config["REDIS_DB"]
 )
+
+class JSONFloat(float):
+  def __repr__(self):
+    return "%0.2g" % self
 
 class FlaskException(Exception):
   status_code = 400
@@ -55,7 +60,7 @@ class FlaskException(Exception):
     rv['message'] = self.message
     return rv
 
-@app.errorhandler(Exception)
+@bp.errorhandler(Exception)
 def handle_all(error):
   # Log all exceptions to Sentry
   # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
@@ -66,7 +71,7 @@ def handle_all(error):
 
   # If we're in debug mode, re-raise the exception so we get the
   # browser debugger
-  if app.debug:
+  if current_app.debug:
     raise
 
   # Also log the exception to the console.
@@ -102,7 +107,7 @@ def handle_all(error):
   response.status_code = code
   return response
 
-@app.before_request
+@bp.before_request
 def before_request():
   global engine
 
@@ -118,13 +123,13 @@ def before_request():
         "grch38": {"db_snp": 17, "genes": 1}}
     g.build_id = build_id
 
-@app.teardown_appcontext
+@current_app.teardown_appcontext
 def close_db(*args):
   db = getattr(g,"db",None)
   if db is not None:
     db.close()
 
-@app.after_request
+@bp.after_request
 def zipper(response):
   if not request.args.get("compress"):
     return response
@@ -152,10 +157,6 @@ def zipper(response):
   response.headers['Content-Length'] = len(response.data)
 
   return response
-
-class JSONFloat(float):
-  def __repr__(self):
-    return "%0.2g" % self
 
 def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
   """
@@ -305,7 +306,7 @@ def rows_to_objects(cur,fields,cols_to_field):
 
   return data
 
-@app.route("/status",methods = ["GET"])
+@bp.route("/status",methods = ["GET"])
 def status():
   info = dict()
 
@@ -324,8 +325,8 @@ def status():
 
   return jsonify(info)
 
-@app.route(
-  "/v{}/annotation/recomb/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/recomb/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def recomb():
@@ -335,8 +336,8 @@ def recomb():
 
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/annotation/recomb/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/recomb/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def recomb_results():
@@ -391,8 +392,8 @@ def recomb_results():
     "lastPage": None
   })
 
-@app.route(
-  "/v{}/annotation/intervals/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/intervals/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def intervals():
@@ -401,8 +402,8 @@ def intervals():
 
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/annotation/intervals/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/intervals/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def interval_results():
@@ -415,8 +416,8 @@ def interval_results():
 
   return std_response(db_table,db_cols,field_to_col)
 
-@app.route(
-  "/v{}/annotation/snps/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/snps/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def snps():
@@ -425,8 +426,8 @@ def snps():
 
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/annotation/snps/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/snps/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def snps_results():
@@ -439,8 +440,8 @@ def snps_results():
 
   return std_response(db_table,db_cols,field_to_col)
 
-@app.route(
-  "/v{}/annotation/gwascatalog/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/gwascatalog/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def gwascat():
@@ -449,8 +450,8 @@ def gwascat():
 
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/annotation/gwascatalog/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/gwascatalog/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def gwascat_results():
@@ -459,13 +460,13 @@ def gwascat_results():
 
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/statistic/single/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/statistic/single/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
-@app.route(
+@bp.route(
   # Keep backwards compat
-  "/v{}/single/".format(app.config["API_VERSION"]),
+  "/v{}/single/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def single():
@@ -479,13 +480,13 @@ def single():
 
   return std_response(db_table,db_cols,field_to_col)
 
-@app.route(
-  "/v{}/statistic/single/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/statistic/single/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
-@app.route(
+@bp.route(
   # Keep backwards compat
-  "/v{}/single/results/".format(app.config["API_VERSION"]),
+  "/v{}/single/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def single_results():
@@ -510,8 +511,8 @@ def single_results():
 
   return std_response(db_table,db_cols,field_to_col,limit=limit)
 
-@app.route(
-  "/v{}/statistic/phewas/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/statistic/phewas/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def phewas():
@@ -565,13 +566,13 @@ def phewas():
     "lastPage": None
   })
 
-@app.route(
-  "/v{}/statistic/pair/LD/results/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/statistic/pair/LD/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
-@app.route(
+@bp.route(
   # Keep backwards compat
-  "/v{}/pair/LD/results/".format(app.config["API_VERSION"]),
+  "/v{}/pair/LD/results/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def ld_results():
@@ -624,7 +625,7 @@ def ld_results():
   rlength = abs(end - start)
 
   # Is the region larger than we're willing to calculate?
-  max_ld_size = app.config["LD_MAX_SIZE"]
+  max_ld_size = current_app.config["LD_MAX_SIZE"]
   if math.fabs(end - start) > max_ld_size:
     raise FlaskException("Requested LD window is too large, exceeded maximum of {}".format(max_ld_size),413)
 
@@ -720,8 +721,8 @@ def ld_results():
 
   return final_resp
 
-@app.route(
-  "/v{}/annotation/genes/sources/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/genes/sources/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def gene_sources():
@@ -729,8 +730,8 @@ def gene_sources():
   db_cols = "id source version genome_build taxid organism".split()
   return std_response(db_table,db_cols)
 
-@app.route(
-  "/v{}/annotation/genes/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/genes/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def genes():
@@ -823,8 +824,8 @@ def genes():
 
   return jsonify(outer)
 
-@app.route(
-  "/v{}/annotation/omnisearch/".format(app.config["API_VERSION"]),
+@bp.route(
+  "/v{}/annotation/omnisearch/".format(current_app.config["API_VERSION"]),
   methods = ["GET"]
 )
 def omnisearch():
