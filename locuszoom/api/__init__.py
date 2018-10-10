@@ -42,6 +42,10 @@ def create_app():
     config = app.config["CACHE_CONFIG"]
   )
 
+  # Setup error handlers
+  from . import errors
+  errors.init_app(app)
+
   with app.app_context():
     # Register routes with app
     from locuszoom.api import routes

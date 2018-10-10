@@ -43,68 +43,6 @@ redis_client = redis.StrictRedis(
   db = current_app.config["REDIS_DB"]
 )
 
-class FlaskException(Exception):
-  status_code = 400
-
-  def __init__(self, message, status_code=None, payload=None):
-    Exception.__init__(self)
-    self.message = message
-    if status_code is not None:
-      self.status_code = status_code
-    self.payload = payload
-
-  def to_dict(self):
-    rv = dict(self.payload or ())
-    rv['message'] = self.message
-    return rv
-
-@bp.errorhandler(Exception)
-def handle_all(error):
-  # Log all exceptions to Sentry
-  # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
-  # these exceptions in the jenkins console)
-  if current_app.config["LZAPI_MODE"] != "jenkins":
-    if sentry is not None:
-      sentry.captureException()
-
-  # If we're in debug mode, re-raise the exception so we get the
-  # browser debugger
-  if current_app.debug:
-    raise
-
-  # Also log the exception to the console.
-  print("Exception thrown while handling request: " + request.url)
-  traceback.print_exc()
-
-  if isinstance(error,ParseException):
-    message = "Incorrect syntax in filter string, error was: " + error.msg
-    code = 400
-  elif isinstance(error,FlaskException):
-    message = error.message
-    code = error.status_code
-  else:
-    message = "An exception was thrown while handling the request. If you believe this request should have succeeded, please create an issue: https://github.com/statgen/locuszoom-api/issues"
-    code = 500
-
-  # A little extra work to figure out the true request URL.
-  # Requires the following set in apache:
-  #   SetEnvIf Request_URI "^(.*)$" REQUEST_URI=$1
-  #   RequestHeader set X-Request-Uri "%{REQUEST_URI}e"
-  full_url = request.url
-  real_uri = request.headers.get("X-Request-Uri")
-  if real_uri is not None:
-    match = re.search("\/(?P<api>\w+)\/(?P<version>v\d+)",real_uri)
-    if match:
-      api_name, api_version = match.groups()
-      full_url = full_url.replace("/" + api_version,"/" + api_name + "/" + api_version)
-
-  response = jsonify({
-    "message": message,
-    "request": full_url
-  })
-  response.status_code = code
-  return response
-
 @bp.before_request
 def before_request():
   global engine
