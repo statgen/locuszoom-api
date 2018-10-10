@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from flask import g, jsonify, request, Blueprint, current_app
 from locuszoom.api import sentry
+from locuszoom.api.json import JSONFloat
 from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from locuszoom.api.models.gene import Gene, Transcript, Exon
 from locuszoom.api.cache import RedisIntervalCache
@@ -41,10 +42,6 @@ redis_client = redis.StrictRedis(
   port = current_app.config["REDIS_PORT"],
   db = current_app.config["REDIS_DB"]
 )
-
-class JSONFloat(float):
-  def __repr__(self):
-    return "%0.2g" % self
 
 class FlaskException(Exception):
   status_code = 400

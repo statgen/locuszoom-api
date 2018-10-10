@@ -2,16 +2,8 @@ import os, datetime
 from flask import Flask, g
 from flask.ext.cors import CORS
 from flask.ext.cache import Cache
-from flask.json import JSONEncoder
 from raven.contrib.flask import Sentry
-
-# Modified JSON encoder to handle datetimes
-class CustomJSONEncoder(JSONEncoder):
-  def default(self,x):
-    if isinstance(x,(datetime.date,datetime.datetime)):
-      return x.isoformat()
-
-    return JSONEncoder.default(self,x)
+from locuszoom.api.json import CustomJSONEncoder
 
 sentry = None
 
