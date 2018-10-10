@@ -1,2 +1,3 @@
-cenv/
+venv/
+*config-*.py
 *.pyc
