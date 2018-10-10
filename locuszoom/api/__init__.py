@@ -23,7 +23,7 @@ def create_app():
     raise Exception("No API mode designated. Set the PORTALAPI_MODE environment variable to 'dev' or 'prod'")
 
   # Config file given mode
-  config_file = os.path.join(app.root_path,"../etc/config-{}.py".format(mode))
+  config_file = os.path.join(app.root_path,"../../etc/config-{}.py".format(mode))
   if not os.path.isfile(config_file):
     raise IOError("Could not find configuration file {} for API mode {}".format(config_file,mode))
 
@@ -48,7 +48,7 @@ def create_app():
 
   # Register routes with app
   with app.app_context():
-    from portalapi.controllers import routes
+    from locuszoom.api import routes
     app.register_blueprint(routes.bp)
 
   # JSON encoder for datetimes

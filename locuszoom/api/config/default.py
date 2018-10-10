@@ -17,12 +17,12 @@ REDIS_PORT = "6379"
 REDIS_DB = 1
 
 # Name passed along to Postgres for application_name
-DB_APP_NAME = "portalapi-dev-server"
+DB_APP_NAME = "locuszoom-api-dev-server"
 
 # Cache settings
 CACHE_CONFIG = dict(
   CACHE_TYPE = "filesystem",
-  CACHE_DIR = "/home/portalapi/cache/dev/",
+  CACHE_DIR = "/path/to/your/cache",
   CACHE_THRESHOLD = 1000,
   CACHE_DEFAULT_TIMEOUT = 2592000 # 30 days
 )
@@ -30,4 +30,3 @@ CACHE_CONFIG = dict(
 # Maximum distance from a reference variant that we will allow
 # for LD calculations
 LD_MAX_FLANK = int(3E6)
-
