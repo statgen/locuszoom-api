@@ -4,6 +4,7 @@ from collections import OrderedDict
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import URL
 from flask import g, jsonify, request, Blueprint, current_app
+from locuszoom.api import sentry
 from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from locuszoom.api.models.gene import Gene, Transcript, Exon
 from locuszoom.api.cache import RedisIntervalCache
@@ -65,7 +66,7 @@ def handle_all(error):
   # Log all exceptions to Sentry
   # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
   # these exceptions in the jenkins console)
-  if mode != "jenkins":
+  if current_app.config["LZAPI_MODE"] != "jenkins":
     if sentry is not None:
       sentry.captureException()
 
