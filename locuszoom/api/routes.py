@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 from cStringIO import StringIO as IO
 from collections import OrderedDict
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine.url import URL
+from sqlalchemy import text
 from flask import g, jsonify, request, Blueprint, current_app
 from locuszoom.api import sentry
 from locuszoom.api.json import JSONFloat
@@ -13,9 +12,8 @@ from locuszoom.api.search_tokenizer import SearchTokenizer
 from pyparsing import ParseException, ParseResults
 from six import iteritems
 from subprocess import check_output
-import requests
-import psycopg2
 import redis
+import requests
 import traceback
 import gzip
 import time
@@ -25,45 +23,6 @@ import re
 START_TIME = time.time()
 
 bp = Blueprint("routes", __name__)
-
-engine = create_engine(
-  URL(**current_app.config["DATABASE"]),
-  connect_args = dict(
-    application_name = current_app.config["DB_APP_NAME"]
-  ),
-  pool_size = 5,
-  max_overflow = 0,
-  isolation_level = "AUTOCOMMIT"
-  # poolclass = NullPool
-)
-
-redis_client = redis.StrictRedis(
-  host = current_app.config["REDIS_HOST"],
-  port = current_app.config["REDIS_PORT"],
-  db = current_app.config["REDIS_DB"]
-)
-
-@bp.before_request
-def before_request():
-  global engine
-
-  db = getattr(g,"db",None)
-  if db is None:
-    db = engine.connect()
-  g.db = db
-
-  # Hard coded for now - should look up from DB
-  build_id = getattr(g, "build_id", None)
-  if build_id is None:
-    build_id = {"grch37": {"db_snp": 16, "genes": 2},
-        "grch38": {"db_snp": 17, "genes": 1}}
-    g.build_id = build_id
-
-@current_app.teardown_appcontext
-def close_db(*args):
-  db = getattr(g,"db",None)
-  if db is not None:
-    db.close()
 
 @bp.after_request
 def zipper(response):
@@ -529,7 +488,7 @@ def ld_results():
   final_url = base_url + param_str
 
   # Cache
-  ld_cache = RedisIntervalCache(redis_client)
+  ld_cache = RedisIntervalCache(g.redis_client)
 
   # Cache key for this particular request.
   # Note that in Daniel's API, for now, "reference" is implicitly

@@ -1,7 +1,7 @@
 import os, datetime
 from flask import Flask, g
-from flask.ext.cors import CORS
-from flask.ext.cache import Cache
+from flask_cors import CORS
+from flask_caching import Cache
 from raven.contrib.flask import Sentry
 from locuszoom.api.json import CustomJSONEncoder
 
@@ -42,13 +42,21 @@ def create_app():
     config = app.config["CACHE_CONFIG"]
   )
 
+  # Setup Postgres DB
+  from . import db
+  db.init_app(app)
+
+  # Setup redis
+  from . import redis_client
+  redis_client.init_app(app)
+
   # Setup error handlers
   from . import errors
   errors.init_app(app)
 
+  # Register routes with app
   with app.app_context():
-    # Register routes with app
-    from locuszoom.api import routes
+    from . import routes
     app.register_blueprint(routes.bp)
 
   # JSON encoder for datetimes
