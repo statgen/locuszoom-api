@@ -20,28 +20,18 @@ pipeline {
     }
     stage('build') {
       steps {
-        sh 'python -m virtualenv --no-site-packages testenv'
-        sh 'testenv/bin/pip install --cache-dir /data/pipcache/ -r requirements.txt'
+        sh 'python3 -m virtualenv --no-site-packages testenv'
         sh 'mkdir -p etc'
         sh 'cp /data/jenkins/locuszoom/config-jenkins.py etc/'
-      }
-    }
-    stage('start-server') {
-      steps {
-        sh 'bin/unused_port.py > FLASK_PORT'
-        sh '''
-          source testenv/bin/activate
-          bin/run_gunicorn.py jenkins --port `cat FLASK_PORT` --host "127.0.0.1" &
-        '''
+        sh 'testenv/bin/pip install --cache-dir /data/pipcache/ -e .'
+        sh 'testenv/bin/pip install --cache-dir /data/pipcache/ --force-reinstall -I psycopg2'
       }
     }
     stage('test') {
       steps {
         sh '''
           export LZAPI_MODE="jenkins"
-          export FLASK_HOST="127.0.0.1"
-          export FLASK_PORT=`cat FLASK_PORT`
-          testenv/bin/pytest --pyargs locuszoom.api --junitxml report.xml
+          testenv/bin/pytest --junitxml report.xml tests
         '''
       }
     }
@@ -60,7 +50,6 @@ pipeline {
   }
   post {
     always {
-      sh 'testenv/bin/python bin/kill_server.py --port `cat FLASK_PORT` --kill'
       junit 'report.xml'
     }
   }
