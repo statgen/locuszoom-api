@@ -9,7 +9,7 @@ def host():
   return os.environ["FLASK_HOST"]
 
 def test_statistic_single_results(host,port):
-  resp = requests.get("http://{}:{}/v1/statistic/single".format(host,port))
+  resp = requests.get("http://{}:{}/v1/statistic/single/".format(host,port))
   assert resp.ok
 
   data = resp.json()
