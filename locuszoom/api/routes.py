@@ -9,7 +9,6 @@ from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from locuszoom.api.models.gene import Gene, Transcript, Exon
 from locuszoom.api.cache import RedisIntervalCache
 from locuszoom.api.search_tokenizer import SearchTokenizer
-from pyparsing import ParseException, ParseResults
 from six import iteritems
 from subprocess import check_output
 import redis
