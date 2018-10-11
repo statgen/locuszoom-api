@@ -126,7 +126,7 @@ class FilterParser(object):
     open_right = False
     uncaught =  []
     for m in x:
-      if isinstance(m, basestring):
+      if isinstance(m, str):
         if m == "and":
           continue
         else:
@@ -195,14 +195,14 @@ class FilterParser(object):
 
     fp = FilterParser()
     for t in grammar_tests:
-      print t
+      print(t)
       for m in fp.parse(t):
         if isinstance(m,str):
-          print m
+          print(m)
         else:
-          print m.lhs, m.comp, m.rhs
+          print(m.lhs, m.comp, m.rhs)
 
-      print "\n"
+      print("\n")
 
 class LDAPITranslator(object):
   def __init__(self):
@@ -276,18 +276,18 @@ class LDAPITranslator(object):
         if match == 'and':
           pass
         elif match == 'or':
-          raise NotImplementedError, "'OR' not implemented"
+          raise NotImplementedError("'OR' not implemented")
       else:
         if match.lhs not in acceptable_fields:
-          raise InvalidFieldException, "Invalid field in query string: {}".format(match.lhs)
+          raise InvalidFieldException("Invalid field in query string: {}".format(match.lhs))
 
         if match.comp not in ops:
-          raise InvalidOperatorException, "Invalid operator in query string: {}".format(match.comp)
+          raise InvalidOperatorException("Invalid operator in query string: {}".format(match.comp))
 
         rhs = list(match.rhs)
         if match.comp == "in":
           if len(rhs) > 1:
-            raise InvalidValueException, "This endpoint only supports 1 value per right-hand side"
+            raise InvalidValueException("This endpoint only supports 1 value per right-hand side")
         elif match.comp == "eq":
           pass
 
@@ -301,7 +301,7 @@ class LDAPITranslator(object):
         if v_lhs == "reference":
           panel = reference_to_code.get(v_rhs)
           if panel is None:
-            raise InvalidValueException, "Reference panel ID given ({}) is not valid".format(v_rhs)
+            raise InvalidValueException("Reference panel ID given ({}) is not valid".format(v_rhs))
 
           v_lhs = "population"
           v_rhs = panel
@@ -371,13 +371,13 @@ class SQLCompiler(object):
       else:
         lhs = field_to_col.get(term.lhs,term.lhs) if field_to_col is not None else term.lhs
         if lhs not in acceptable_fields:
-          raise InvalidFieldException, "Invalid field in query string: {}".format(term.lhs)
+          raise InvalidFieldException("Invalid field in query string: {}".format(term.lhs))
 
         where.append(self.quote_keywords(lhs))
 
         sql_comp = self.ops.get(term.comp)
         if sql_comp is None:
-          raise InvalidOperatorException, "Invalid operator in query string: {}".format(term.comp)
+          raise InvalidOperatorException("Invalid operator in query string: {}".format(term.comp))
         where.append(sql_comp)
 
         if term.comp == "in":
@@ -464,10 +464,10 @@ def uri_example():
     "rest.single_analyses",
     "trait chromosome start end".split()
   )
-  print sql, "\n", params
+  print(sql, "\n", params)
 
   txt = text(sql)
   cur = con.execute(txt,params)
   for row in cur:
-    print row
+    print(row)
   

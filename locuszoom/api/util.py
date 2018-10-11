@@ -8,4 +8,4 @@ def timer(name=None):
   end = time.clock()
 
   label = "<no label>" if name is None else name
-  print "[{}] Time required: {} ms".format(label,(end - start) * 1000)
+  print("[{}] Time required: {} ms".format(label,(end - start) * 1000))

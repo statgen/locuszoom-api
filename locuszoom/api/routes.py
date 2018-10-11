@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from cStringIO import StringIO as IO
+from io import StringIO as IO
 from collections import OrderedDict
 from sqlalchemy import text
 from flask import g, jsonify, request, Blueprint, current_app
@@ -102,27 +102,27 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
 
   if fields_str is not None:
     # User's requested fields
-    fields = map(lambda x: x.strip(),fields_str.split(","))
+    fields = [x.strip() for x in fields_str.split(",")]
 
     # Translate to database columns
     if field_to_cols is not None:
-      fields = map(lambda x: field_to_cols.get(x,x),fields)
+      fields = [field_to_cols.get(x,x) for x in fields]
 
     # To avoid injection, only accept fields that we know about
-    fields = filter(lambda x: x in db_cols,fields)
+    fields = [x for x in fields if x in db_cols]
   else:
     fields = db_cols
 
   if sort_str is not None:
     # User's requested fields
-    sort_fields = map(lambda x: x.strip(),sort_str.split(","))
+    sort_fields = [x.strip() for x in sort_str.split(",")]
 
     # Translate to database columns
     if field_to_cols is not None:
-      sort_fields = map(lambda x: field_to_cols.get(x,x),sort_fields)
+      sort_fields = [field_to_cols.get(x,x) for x in sort_fields]
 
     # To avoid injection, only accept fields that we know about
-    sort_fields = filter(lambda x: x in db_cols,sort_fields)
+    sort_fields = [x for x in sort_fields if x in db_cols]
   else:
     sort_fields = None
 
@@ -150,7 +150,7 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
 def reshape_data(rows,fields,field_to_cols=None,style="table"):
   # We may need to translate db columns --> field names.
   if field_to_cols is not None:
-    cols_to_field = {v: k for k, v in field_to_cols.iteritems()}
+    cols_to_field = {v: k for k, v in field_to_cols.items()}
   else:
     cols_to_field = {v: v for v in fields}
 
@@ -169,7 +169,7 @@ def rows_to_arrays(cur,fields,cols_to_field):
       field = cols_to_field.get(col,col)
       val = row[col]
       if isinstance(val,dict):
-        for k, v in val.iteritems():
+        for k, v in val.items():
           if k not in data:
             data[k] = [None] * i
           data[k].append(v)
@@ -178,7 +178,7 @@ def rows_to_arrays(cur,fields,cols_to_field):
 
   if not data:
     # No data was found so fill with empty arrays
-    db_cols = cur.keys()
+    db_cols = list(cur.keys())
     for col in db_cols:
       data[cols_to_field.get(col,col)] = []
 
@@ -214,7 +214,7 @@ def status():
   minutes, seconds = divmod(time.time() - START_TIME,60)
   hours, minutes = divmod(minutes,60)
   days, hours = divmod(hours,24)
-  days, hours, minutes, seconds = map(int,(days,hours,minutes,round(seconds)))
+  days, hours, minutes, seconds = list(map(int,(days,hours,minutes,round(seconds))))
   info["uptime"] = "{}d:{}h:{}m:{}s".format(days,hours,minutes,seconds)
 
   return jsonify(info)
@@ -542,21 +542,21 @@ def ld_results():
   try:
     cache_data = ld_cache.retrieve(cache_key,start,end)
   except redis.ConnectionError:
-    print "Warning: cache retrieval failed (redis was unable to connect)"
+    print("Warning: cache retrieval failed (redis was unable to connect)")
   except:
-    print "Error: redis connected, but retrieving data failed"
+    print("Error: redis connected, but retrieving data failed")
     traceback.print_exc()
 
   if cache_data is None:
     # Need to compute. Either the range given is larger than we've previously computed,
     # or redis is down.
-    print "Cache miss for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), recalculating".format(
+    print("Cache miss for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), recalculating".format(
       reference=reference,
       refvariant=refvariant,
       start=start,
       end=end,
       rlength=rlength/1000
-    )
+    ))
 
     # Fire off the request to the LD server.
     try:
@@ -590,19 +590,19 @@ def ld_results():
       try:
         ld_cache.store(cache_key,start,end,for_cache)
       except redis.ConnectionError:
-        print "Warning: cache storage failed (redis was unable to connect)"
+        print("Warning: cache storage failed (redis was unable to connect)")
       except:
-        print "Error: storing data in cache failed, traceback was: "
+        print("Error: storing data in cache failed, traceback was: ")
         traceback.print_exc()
 
   else:
-    print "Cache *match* for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), using cached data".format(
+    print("Cache *match* for {reference}__{refvariant} in {start}-{end} ({rlength:,.2f}kb), using cached data".format(
       reference=reference,
       refvariant=refvariant,
       start=start,
       end=end,
       rlength=rlength/1000
-    )
+    ))
 
     # We can just use the cache's data directly.
     for position, ld_pair in iteritems(cache_data):

@@ -31,7 +31,7 @@ def create_app():
   if "SENTRY_DSN" in app.config:
     sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
   else:
-    print "Warning: Sentry DSN not found, skipping"
+    print("Warning: Sentry DSN not found, skipping")
 
   # Enable cross-domain headers on all routes
   CORS(app)

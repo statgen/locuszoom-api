@@ -5,9 +5,7 @@ from six.moves.cPickle import dumps, loads
 from collections import OrderedDict
 from intervaltree import IntervalTree, Interval
 
-class IntervalCache:
-  __metaclass__ = ABCMeta
-
+class IntervalCache(metaclass=ABCMeta):
   def __init__(self):
     pass
 

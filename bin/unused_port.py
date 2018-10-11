@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import psutil, random
 
 used_ports = set([x.laddr[1] for x in psutil.net_connections()])

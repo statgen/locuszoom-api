@@ -25,7 +25,7 @@ class Exon(object):
       else:
         return False
     else:
-      raise ValueError, "Comparing exons on separate chromosomes"
+      raise ValueError("Comparing exons on separate chromosomes")
 
 class Transcript(object):
   cargs = "transcript_id chrom start end strand".split()
@@ -66,7 +66,7 @@ class Transcript(object):
       else:
         return False
     else:
-      raise ValueError, "Comparing transcripts on separate chromosomes"
+      raise ValueError("Comparing transcripts on separate chromosomes")
 
 class Gene(object):
   cargs = "gene_id gene_name chrom start end strand".split()
@@ -143,7 +143,7 @@ def test():
   from pprint import pprint
   pprint(g.to_dict())
 
-  print "Trying to convert to JSON"
+  print("Trying to convert to JSON")
   js = json.dumps(g.to_dict())
   pprint(js)
   

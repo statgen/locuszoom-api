@@ -24,7 +24,7 @@ setup(
     'Development Status :: 4 - Beta',
     'Intended Audience :: Science/Research',
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-    'Programming Language :: Python :: 2.7 :: Only',
+    'Programming Language :: Python :: 3.6 :: Only',
     'Operating System :: POSIX :: Linux',
   ],
 )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import os, sys, psutil, time
 
 # THIS SCRIPT SHOULD BE RUN AS ROOT

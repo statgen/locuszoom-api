@@ -32,7 +32,7 @@ def handle_all(error):
     raise
 
   # Also log the exception to the console.
-  print("Exception thrown while handling request: " + request.url)
+  print(("Exception thrown while handling request: " + request.url))
   traceback.print_exc()
 
   if isinstance(error,ParseException):

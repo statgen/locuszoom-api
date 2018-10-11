@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+
 from multiprocessing import Process
 from urllib.parse import urlparse
 from termcolor import colored
