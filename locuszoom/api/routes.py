@@ -21,7 +21,7 @@ import re
 
 START_TIME = time.time()
 
-bp = Blueprint("routes", __name__)
+bp = Blueprint("routes", __name__, url_prefix="/v{}".format(current_app.config["API_VERSION"]))
 
 @bp.after_request
 def zipper(response):
@@ -220,7 +220,7 @@ def status():
   return jsonify(info)
 
 @bp.route(
-  "/v{}/annotation/recomb/".format(current_app.config["API_VERSION"]),
+  "/annotation/recomb/",
   methods = ["GET"]
 )
 def recomb():
@@ -231,7 +231,7 @@ def recomb():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/annotation/recomb/results/".format(current_app.config["API_VERSION"]),
+  "/annotation/recomb/results/",
   methods = ["GET"]
 )
 def recomb_results():
@@ -287,7 +287,7 @@ def recomb_results():
   })
 
 @bp.route(
-  "/v{}/annotation/intervals/".format(current_app.config["API_VERSION"]),
+  "/annotation/intervals/",
   methods = ["GET"]
 )
 def intervals():
@@ -297,7 +297,7 @@ def intervals():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/annotation/intervals/results/".format(current_app.config["API_VERSION"]),
+  "/annotation/intervals/results/",
   methods = ["GET"]
 )
 def interval_results():
@@ -311,7 +311,7 @@ def interval_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @bp.route(
-  "/v{}/annotation/snps/".format(current_app.config["API_VERSION"]),
+  "/annotation/snps/",
   methods = ["GET"]
 )
 def snps():
@@ -321,7 +321,7 @@ def snps():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/annotation/snps/results/".format(current_app.config["API_VERSION"]),
+  "/annotation/snps/results/",
   methods = ["GET"]
 )
 def snps_results():
@@ -335,7 +335,7 @@ def snps_results():
   return std_response(db_table,db_cols,field_to_col)
 
 @bp.route(
-  "/v{}/annotation/gwascatalog/".format(current_app.config["API_VERSION"]),
+  "/annotation/gwascatalog/",
   methods = ["GET"]
 )
 def gwascat():
@@ -345,7 +345,7 @@ def gwascat():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/annotation/gwascatalog/results/".format(current_app.config["API_VERSION"]),
+  "/annotation/gwascatalog/results/",
   methods = ["GET"]
 )
 def gwascat_results():
@@ -355,12 +355,12 @@ def gwascat_results():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/statistic/single/".format(current_app.config["API_VERSION"]),
+  "/statistic/single/",
   methods = ["GET"]
 )
 @bp.route(
   # Keep backwards compat
-  "/v{}/single/".format(current_app.config["API_VERSION"]),
+  "/single/",
   methods = ["GET"]
 )
 def single():
@@ -375,12 +375,12 @@ def single():
   return std_response(db_table,db_cols,field_to_col)
 
 @bp.route(
-  "/v{}/statistic/single/results/".format(current_app.config["API_VERSION"]),
+  "/statistic/single/results/",
   methods = ["GET"]
 )
 @bp.route(
   # Keep backwards compat
-  "/v{}/single/results/".format(current_app.config["API_VERSION"]),
+  "/single/results/",
   methods = ["GET"]
 )
 def single_results():
@@ -406,7 +406,7 @@ def single_results():
   return std_response(db_table,db_cols,field_to_col,limit=limit)
 
 @bp.route(
-  "/v{}/statistic/phewas/".format(current_app.config["API_VERSION"]),
+  "/statistic/phewas/",
   methods = ["GET"]
 )
 def phewas():
@@ -461,12 +461,12 @@ def phewas():
   })
 
 @bp.route(
-  "/v{}/statistic/pair/LD/results/".format(current_app.config["API_VERSION"]),
+  "/statistic/pair/LD/results/",
   methods = ["GET"]
 )
 @bp.route(
   # Keep backwards compat
-  "/v{}/pair/LD/results/".format(current_app.config["API_VERSION"]),
+  "/pair/LD/results/",
   methods = ["GET"]
 )
 def ld_results():
@@ -616,7 +616,7 @@ def ld_results():
   return final_resp
 
 @bp.route(
-  "/v{}/annotation/genes/sources/".format(current_app.config["API_VERSION"]),
+  "/annotation/genes/sources/",
   methods = ["GET"]
 )
 def gene_sources():
@@ -625,7 +625,7 @@ def gene_sources():
   return std_response(db_table,db_cols)
 
 @bp.route(
-  "/v{}/annotation/genes/".format(current_app.config["API_VERSION"]),
+  "/annotation/genes/",
   methods = ["GET"]
 )
 def genes():
@@ -719,7 +719,7 @@ def genes():
   return jsonify(outer)
 
 @bp.route(
-  "/v{}/annotation/omnisearch/".format(current_app.config["API_VERSION"]),
+  "/annotation/omnisearch/",
   methods = ["GET"]
 )
 def omnisearch():
