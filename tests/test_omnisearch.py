@@ -1,23 +1,14 @@
-import requests, os, pytest
 from six import string_types
 
-@pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
-
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
-
-def test_omni(host,port):
+def test_omni(client):
   params = {
     "q": "CSF3",
     "build": "GRCh38"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/omnisearch/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/omnisearch/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
+  js = resp.json
 
   assert len(js["data"]) > 0
 
@@ -34,4 +25,3 @@ def test_omni(host,port):
 
   assert isinstance(js["build"],string_types)
   assert js["build"].lower().startswith("grch")
-

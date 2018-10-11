@@ -1,22 +1,13 @@
-import requests, os, pytest
 from six import string_types
 
-@pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
-
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
-
-def test_intervals(host,port):
+def test_intervals(client):
   params = {
     "filter": "id in 18 and chromosome eq '16' and start le 54119169 and end ge 53519169"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/intervals/results/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/intervals/results/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
+  js = resp.json
   data = js["data"]
 
   assert len(data) > 0
@@ -63,4 +54,3 @@ def test_intervals(host,port):
 
   # Check that all vectors are same length
   assert len(set(map(len,data.values()))) == 1
-

@@ -1,27 +1,18 @@
-import requests, os, pytest
+import requests, os
+from flask import url_for
 from six import string_types
 
-@pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
-
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
-
-def test_gene(host,port):
+def test_gene(client):
   params = {
     "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/genes/",query_string=params)
 
-  js = resp.json()
-
-  assert len(js["data"]) > 0
+  assert resp.status_code == 200
+  assert len(resp.json["data"]) > 0
 
   # Check format of gene
-  for gene in js["data"]:
+  for gene in resp.json["data"]:
     for key in ("chrom","end","exons","gene_id","gene_name","start","strand","transcripts"):
       assert key in gene
 
@@ -57,7 +48,7 @@ def test_gene(host,port):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
-def test_no_genes(host,port):
+def test_no_genes(client):
   """
   Test region that should contain no genes
   """
@@ -65,14 +56,12 @@ def test_no_genes(host,port):
   params = {
     "filter": "source in 2 and chrom eq '16' and start le 54265502 and end ge 54164840"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
+  assert len(resp.json["data"]) == 0
 
-  assert len(js["data"]) == 0
-
-def test_wwox(host,port):
+def test_wwox(client):
   """
   This region perfectly excludes all of the exons of 1 transcript of WWOX
   Previously this caused an error because locuszoom expects all transcripts returned
@@ -84,14 +73,12 @@ def test_wwox(host,port):
   params = {
     "filter": "source in 2 and chrom eq '16' and start le 79189937 and end ge 78189937"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
+  assert len(resp.json["data"]) > 0
 
-  assert len(js["data"]) > 0
-
-  for gene in js["data"]:
+  for gene in resp.json["data"]:
     for tx in gene["transcripts"]:
       for key in ("chrom","end","exons","start","strand","transcript_id"):
         assert key in tx
@@ -103,7 +90,7 @@ def test_wwox(host,port):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
-def test_skip_transcripts(host,port):
+def test_skip_transcripts(client):
   """
   Make sure gene query honors transcripts=F
   """
@@ -112,13 +99,10 @@ def test_skip_transcripts(host,port):
     "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060",
     "transcripts": "F"
   }
-  resp = requests.get("http://{}:{}/v1/annotation/genes/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
-
-  assert len(js["data"]) > 0
-  for gene in js["data"]:
+  assert len(resp.json["data"]) > 0
+  for gene in resp.json["data"]:
     assert "transcripts" not in gene
     assert "exons" not in gene
-

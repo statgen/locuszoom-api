@@ -1,22 +1,12 @@
-import requests, os, pytest
-
-@pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
-
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
-
-def test_phewas(host,port):
+def test_phewas(client):
   params = {
     "filter": "variant eq '10:114758349_C/T'",
     "build": ["GRCh37","GRCh38"]
   }
-  resp = requests.get("http://{}:{}/v1/statistic/phewas/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/statistic/phewas/",query_string=params)
+  assert resp.status_code == 200
 
-  data = resp.json()
+  data = resp.json
   fields = "description build chromosome id log_pvalue pmid position ref_allele ref_allele_freq score_test_stat " \
            "study tech trait trait_group trait_label variant".split()
 
@@ -28,4 +18,3 @@ def test_phewas(host,port):
   # Datasets without a trait group or label should not be returned by the API endpoint
   assert all(x is not None for x in data["data"]["trait_group"])
   assert all(x is not None for x in data["data"]["trait_label"])
-

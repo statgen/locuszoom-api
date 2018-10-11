@@ -1,22 +1,13 @@
-import requests, os, pytest
 from six import string_types
 
-@pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
-
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
-
-def test_ld_small(host,port):
+def test_ld_small(client):
   params = {
     "filter": "reference eq 1 and chromosome2 eq '16' and position2 ge 56859412 and position2 le 57059412 and variant1 eq '16:56989590_C/T'"
   }
-  resp = requests.get("http://{}:{}/v1/statistic/pair/LD/results/".format(host,port),params=params)
-  assert resp.ok
+  resp = client.get("/v1/statistic/pair/LD/results/",query_string=params)
+  assert resp.status_code == 200
 
-  js = resp.json()
+  js = resp.json
   data = js["data"]
 
   assert len(js["data"]) > 0
@@ -52,4 +43,3 @@ def test_ld_small(host,port):
     return (v >= 0) and (v <= 1)
 
   assert all(map(check_rsquare,data["rsquare"]))
-

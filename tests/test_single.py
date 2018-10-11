@@ -1,19 +1,16 @@
 import requests, os, pytest
+from locuszoom.api import create_app
 
 @pytest.fixture
-def port():
-  return os.environ["FLASK_PORT"]
+def client():
+  app = create_app()
+  client = app.test_client()
+  return client
 
-@pytest.fixture
-def host():
-  return os.environ["FLASK_HOST"]
+def test_statistic_single_experiment(client):
+  resp = client.get("/v1/statistic/single/")
+  assert resp.status_code == 200
 
-def test_statistic_single(host,port):
-  resp = requests.get("http://{}:{}/v1/statistic/single/".format(host,port))
-  assert resp.ok
-
-  data = resp.json()
   for k in "analysis build date first_author last_author id imputed pmid study tech trait".split():
-    assert k in data["data"]
-    assert len(data["data"][k]) > 1
-
+    assert k in resp.json["data"]
+    assert len(resp.json["data"][k]) > 1
