@@ -1,7 +1,6 @@
 import os, datetime
 from flask import Flask, g
 from flask_cors import CORS
-from flask_caching import Cache
 from raven.contrib.flask import Sentry
 from locuszoom.api.json import CustomJSONEncoder
 
@@ -35,12 +34,6 @@ def create_app():
 
   # Enable cross-domain headers on all routes
   CORS(app)
-
-  # Enable caching
-  cache = Cache(
-    app,
-    config = app.config["CACHE_CONFIG"]
-  )
 
   # Setup Postgres DB
   from . import db

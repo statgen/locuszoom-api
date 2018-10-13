@@ -4,7 +4,6 @@ blinker==1.4
 Click==7.0
 contextlib2==0.5.5
 Flask==1.0.2
-Flask-Caching==1.4.0
 Flask-Cors==3.0.6
 funcsigs==1.0.2
 gevent==1.1.0
