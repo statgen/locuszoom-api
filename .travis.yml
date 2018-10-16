@@ -16,6 +16,7 @@ install:
 - export TRAVIS_HOME=`pwd`
 - ssh-agent bash -c 'ssh-add .ssh/locuszoom-db; git clone git@github.com:statgen/locuszoom-db.git lzdb'
 - pip install -r requirements.txt
+- pip install -e .
 - cd lzdb/db/pytest
 - python pytest_initdb.py --host 127.0.0.1 --port 5432 --user postgres --connect-db postgres --database pytest
 - cd $TRAVIS_HOME
