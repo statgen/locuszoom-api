@@ -1,0 +1,24 @@
+language: python
+
+python:
+- '3.6'
+
+services:
+- postgresql
+
+addons:
+  postgresql: "9.4"
+
+before_install:
+- openssl aes-256-cbc -K $encrypted_ea4d2d5992dd_key -iv $encrypted_ea4d2d5992dd_iv -in .ssh/locuszoom-db.enc -out .ssh/locuszoom-db -d && chmod 600 .ssh/locuszoom-db
+
+install:
+- export TRAVIS_HOME=`pwd`
+- ssh-agent bash -c 'ssh-add .ssh/locuszoom-db; git clone git@github.com:statgen/locuszoom-db.git lzdb'
+- pip install -r requirements.txt
+- cd lzdb/db/pytest
+- python pytest_initdb.py --host 127.0.0.1 --port 5432 --user postgres --connect-db postgres --database pytest
+- cd $TRAVIS_HOME
+
+script:
+- LZAPI_MODE="travis" pytest tests
