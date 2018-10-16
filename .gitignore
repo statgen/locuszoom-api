@@ -2,3 +2,5 @@ venv/
 webhook
 *config-*.py
 *.pyc
+.ssh/locuszoom-db
+.ssh/locuszoom-db.pub
