@@ -11,6 +11,7 @@ from locuszoom.api.cache import RedisIntervalCache
 from locuszoom.api.search_tokenizer import SearchTokenizer
 from six import iteritems
 from subprocess import check_output
+import psycopg2
 import redis
 import requests
 import traceback
