@@ -52,10 +52,13 @@ def bash(cmd,check=True,wait=True,echo=True):
   return p.returncode
 
 # Get the API mode
-if len(sys.argv) < 2:
-  raise ValueError("Must pass in API mode to deploy script, e.g. prod or dev.")
+LZAPI_MODE = os.environ.get("LZAPI_MODE")
+if LZAPI_MODE is None:
+  try:
+    LZAPI_MODE = sys.argv[1]
+  except:
+    raise ValueError("Must set LZAPI_MODE or pass it as first argument")
 
-LZAPI_MODE = os.environ.get("LZAPI_MODE", sys.argv[1])
 LZAPI_HOME = os.environ.get("LZAPI_HOME")
 CFG = f"etc/config-{LZAPI_MODE}.py"
 
