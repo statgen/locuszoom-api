@@ -28,6 +28,6 @@ deploy:
   - provider: script
     on:
       branch: dev
-    script: |
-      openssl aes-256-cbc -K $encrypted_ea4d2d5992dd_key -iv $encrypted_ea4d2d5992dd_iv -in .ssh/portaldev_deploy.enc -out .ssh/portaldev_deploy -d && \
+    script: >
+      openssl aes-256-cbc -K $encrypted_ea4d2d5992dd_key -iv $encrypted_ea4d2d5992dd_iv -in .ssh/portaldev_deploy.enc -out .ssh/portaldev_deploy -d &&
       ssh -i .ssh/portaldev_deploy lzapi@portaldev.sph.umich.edu dev
