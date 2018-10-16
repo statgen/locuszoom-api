@@ -3,6 +3,10 @@ language: python
 python:
 - '3.6'
 
+branches:
+  except:
+    - master
+
 services:
 - postgresql
 
