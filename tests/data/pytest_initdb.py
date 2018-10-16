@@ -41,11 +41,11 @@ if __name__ == "__main__":
     # code = fp.read()
     # cur.execute(code)
 
-  with open("../create_tables.sql") as fp:
+  with open("create_tables.sql") as fp:
     code = fp.read()
     cur.execute(code)
 
-  with open("../create_sp.sql") as fp:
+  with open("create_sp.sql") as fp:
     code = fp.read()
     cur.execute(code)
 
