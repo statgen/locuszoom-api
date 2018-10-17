@@ -17,7 +17,6 @@ addons:
 
 install:
 - export TRAVIS_HOME=`pwd`
-- pip install -r requirements.txt
 - pip install -e .
 - cd tests/data
 - python pytest_initdb.py --host 127.0.0.1 --port 5432 --user postgres --connect-db postgres --database travis
