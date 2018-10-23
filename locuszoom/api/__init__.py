@@ -43,6 +43,10 @@ def create_app():
   from . import redis_client
   redis_client.init_app(app)
 
+  # Setup helpers
+  from . import helpers
+  helpers.init_app(app)
+
   # Setup error handlers
   from . import errors
   errors.init_app(app)
