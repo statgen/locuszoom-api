@@ -206,10 +206,10 @@ def status():
   info = dict()
 
   # Current branch
-  info["branch"] = check_output("git symbolic-ref --short -q HEAD",shell=True).strip()
+  info["branch"] = check_output("git symbolic-ref --short -q HEAD",shell=True,universal_newlines=True).strip()
 
   # Current commit
-  info["githash"] = check_output("git rev-parse HEAD",shell=True).strip()
+  info["githash"] = check_output("git rev-parse HEAD",shell=True,universal_newlines=True).strip()
 
   # Uptime
   minutes, seconds = divmod(time.time() - START_TIME,60)
