@@ -97,14 +97,15 @@ if __name__ == "__main__":
 
   # Setup venv
   bash("rm -rf venv")
-  bash("python3 -m virtualenv --no-site-packages venv")
+  pyexe = sys.executable
+  bash(f"{pyexe} -m virtualenv --no-site-packages venv")
 
   # For some reason psycopg2 is special and must be separately installed & forcibly reinstalled or you'll get libpq errors
   bash("source venv/bin/activate && pip install -e .")
 
   # Activate environment and run server
   print("Starting server")
-  bash(f"source venv/bin/activate && bin/run_gunicorn.py {LZAPI_MODE}",wait=False)
+  bash(f"source venv/bin/activate && bin/run_gunicorn.py",wait=False)
 
   # Give the server reasonable amount of time to startup
   time.sleep(5)
@@ -115,3 +116,5 @@ if __name__ == "__main__":
   testreq = requests.get(url)
   if testreq.status_code != 200:
     raise Exception("... API server failed smoke test!")
+
+  print("Deployment finished")
