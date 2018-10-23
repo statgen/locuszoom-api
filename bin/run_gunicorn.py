@@ -11,7 +11,7 @@ def import_settings(f):
 def parse_args():
   from argparse import ArgumentParser
   p = ArgumentParser()
-  p.add_argument("mode")
+  p.add_argument("--mode")
   p.add_argument("--port",type=int)
   p.add_argument("--host",type=str)
   return p.parse_args()
@@ -28,9 +28,14 @@ if __name__ == "__main__":
   # What server mode?
   # Should be one of: prod, dev, jenkins, quick
   args = parse_args()
-  mode = args.mode
+  mode = os.environ.get("LZAPI_MODE")
+  if mode is None:
+    mode = args.mode
 
-  # Set environment variable
+  if mode is None:
+    raise Exception("API mode must be set either with the envvar LZAPI_MODE, or with --mode")
+
+  # Make sure the environment variable LZAPI_MODE is set
   # This is needed by the gunicorn command, the flask app,
   # and the find/monitor server code
   os.environ["LZAPI_MODE"] = mode
