@@ -1,6 +1,7 @@
 import os, datetime
 from flask import Flask, g
 from flask_cors import CORS
+from flask_compress import Compress
 from raven.contrib.flask import Sentry
 from locuszoom.api.json import CustomJSONEncoder
 
@@ -34,6 +35,9 @@ def create_app():
 
   # Enable cross-domain headers on all routes
   CORS(app)
+
+  # Enable compression support
+  Compress(app)
 
   # Setup Postgres DB
   from . import db

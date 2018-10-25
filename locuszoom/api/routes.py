@@ -24,35 +24,6 @@ START_TIME = time.time()
 
 bp = Blueprint("routes", __name__, url_prefix="/v{}".format(current_app.config["API_VERSION"]))
 
-@bp.after_request
-def zipper(response):
-  if not request.args.get("compress"):
-    return response
-
-  accept_encoding = request.headers.get('Accept-Encoding', '')
-
-  if 'gzip' not in accept_encoding.lower():
-    return response
-
-  response.direct_passthrough = False
-
-  if (response.status_code < 200 or
-    response.status_code >= 300 or
-    'Content-Encoding' in response.headers):
-    return response
-
-  gzip_buffer = IO()
-  gzip_file = gzip.GzipFile(mode='wb',fileobj=gzip_buffer)
-  gzip_file.write(response.data)
-  gzip_file.close()
-
-  response.data = gzip_buffer.getvalue()
-  response.headers['Content-Encoding'] = 'gzip'
-  response.headers['Vary'] = 'Accept-Encoding'
-  response.headers['Content-Length'] = len(response.data)
-
-  return response
-
 def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
   """
   Standard API response for simple cases of executing a filter against a single
