@@ -1,4 +1,5 @@
 import traceback
+import re
 from flask import current_app, request, jsonify
 from pyparsing import ParseException
 from locuszoom.api import sentry
