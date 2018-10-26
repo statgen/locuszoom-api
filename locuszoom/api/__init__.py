@@ -5,8 +5,6 @@ from flask_compress import Compress
 from raven.contrib.flask import Sentry
 from locuszoom.api.json import CustomJSONEncoder
 
-sentry = None
-
 def create_app():
   # Create flask app
   app = Flask(__name__)
@@ -27,11 +25,9 @@ def create_app():
   # Set mode
   app.config["LZAPI_MODE"] = lzapi_mode
 
-  # Start logging errors
-  if "SENTRY_DSN" in app.config:
-    sentry = Sentry(app,dsn=app.config["SENTRY_DSN"],register_signal=False,wrap_wsgi=False)
-  else:
-    print("Warning: Sentry DSN not found, skipping")
+  # Fire up sentry if necessary
+  from . import sentry
+  sentry.init_app(app)
 
   # Enable cross-domain headers on all routes
   CORS(app)

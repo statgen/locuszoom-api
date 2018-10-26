@@ -2,7 +2,6 @@ import traceback
 import re
 from flask import current_app, request, jsonify
 from pyparsing import ParseException
-from locuszoom.api import sentry
 
 class FlaskException(Exception):
   status_code = 400
@@ -23,9 +22,12 @@ def handle_all(error):
   # Log all exceptions to Sentry
   # If this is a jenkins testing instance, though, don't log to Sentry (we'll see
   # these exceptions in the jenkins console)
-  if current_app.config["LZAPI_MODE"] != "jenkins":
-    if sentry is not None:
-      sentry.captureException()
+  if current_app.config["LZAPI_MODE"] != "travis":
+    if current_app.sentry is not None:
+      print("Attempting to log exception to Sentry...")
+      current_app.sentry.captureException()
+    else:
+      print("Warning: Sentry not setup to log exception")
 
   # If we're in debug mode, re-raise the exception so we get the
   # browser debugger
