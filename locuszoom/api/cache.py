@@ -138,7 +138,7 @@ class RedisIntervalCache(IntervalCache):
     for k, v in iteritems(data):
       v_serial = v
       if not isinstance(v,str):
-        v_serial = msgpack.packb(v)
+        v_serial = msgpack.packb(v,use_bin_type=True)
 
       pipe.zadd(zset,k,v_serial)
 
@@ -167,7 +167,7 @@ class RedisIntervalCache(IntervalCache):
     data = OrderedDict()
     for record in self.red.zrangebyscore(zset,start,end,withscores=True):
       pos = int(record[1])
-      value = msgpack.unpackb(record[0])
+      value = msgpack.unpackb(record[0],raw=False)
       data[pos] = value
 
     return data
