@@ -9,6 +9,7 @@ from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from locuszoom.api.models.gene import Gene, Transcript, Exon
 from locuszoom.api.cache import RedisIntervalCache
 from locuszoom.api.search_tokenizer import SearchTokenizer
+from locuszoom.api.errors import FlaskException
 from six import iteritems
 from subprocess import check_output
 import psycopg2
