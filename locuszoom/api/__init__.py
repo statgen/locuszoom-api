@@ -2,7 +2,6 @@ import os, datetime
 from flask import Flask, g
 from flask_cors import CORS
 from flask_compress import Compress
-from raven.contrib.flask import Sentry
 from locuszoom.api.json import CustomJSONEncoder
 
 def create_app():
@@ -24,10 +23,6 @@ def create_app():
 
   # Set mode
   app.config["LZAPI_MODE"] = lzapi_mode
-
-  # Fire up sentry if necessary
-  from . import sentry
-  sentry.init_app(app)
 
   # Enable cross-domain headers on all routes
   CORS(app)
