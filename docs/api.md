@@ -1092,11 +1092,11 @@ curl "http://portaldev.sph.umich.edu/api/v1/annotation/genes/"
 Field | Description
 ----- | -----------
 source | Genes annotation resource id.
-name | Gene name (non-unique).
-id | Gene unique id.
+gene_name | Gene name (non-unique).
+gene_id | Gene unique id.
 chrom | Chromosome name.
-region-start | Gene start position.
-region-end | Gene end position.
+start | Gene start position.
+end | Gene end position.
 strand | Gene strand
 
 #### FILTERS
@@ -1104,9 +1104,9 @@ strand | Gene strand
 Filter | Description
 ------ | -----------
 source in 1, 2 | Selects gene annotation source by a unique identifier.
-name in ‘APOE’, ‘TCF7L2’ | Selects gene annotation by non-unique display name(s).
-id in ‘ENSG00000223972.5’, ‘ENSG00000227232.5’ | Selects gene annotation by unique gene ID(s).
-chrom eq ‘chr20’ | Selects gene annotation that lie within a chromosome.
+gene_name in 'APOE', 'TCF7L2' | Selects gene annotation by non-unique display name(s).
+gene_id in 'ENSG00000223972.5', 'ENSG00000227232.5' | Selects gene annotation by unique gene ID(s).
+chrom eq 'chr20' | Selects gene annotation that lie within a chromosome.
 start ge 20000000 | Selects gene annotation with start positions greater than a certain value.
 end le 20100000 | Selects gene annotation with end positions less than a certain value.
 
@@ -1154,7 +1154,7 @@ label | Type of region: "gene_name", "transcript_name", "exon_name".
 
 Filter | Description
 ------ | -----------
-name startswith ‘TCF’, ‘ENSG00001’, ‘ENSG’ | Selects all gene_id, gene_name, transcript_id, transcript_name, and exon_id that start with a string.
+name startswith 'TCF', 'ENSG00001', 'ENSG' | Selects all gene_id, gene_name, transcript_id, transcript_name, and exon_id that start with a string.
 
 #### SORT
 
