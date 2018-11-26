@@ -703,6 +703,66 @@ recomb_rate | Recombination rate
 
 Data can be sorted on any field by adding `&sort=field1,field2` onto your URL.
 
+## Search endpoints
+
+### Omnisearch
+
+Search for genomic coordinates given a rsID, gene, transcript, etc. The following example search formats are supported:
+
+* chr:position
+* chr:start-stop
+* chr:position+offset (-> chr:position-offset - chr:position+offset)
+* rs00001
+* rs00001+offset
+* gene symbol names
+* transcript names 
+
+Positions and offsets may have commas and use K and M suffixes.
+
+`GET /annotation/omnisearch/`
+
+> Example: Find gene positions by gene name
+
+```shell
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/omnisearch/"  --data-urlencode "q=TCF7L2" --data-urlencode "build=GRCh37"
+```
+
+```json
+{
+  "build": "grch37", 
+  "data": [
+    {
+      "chrom": "10", 
+      "end": 114927437, 
+      "gene_id": "ENSG00000148737.11", 
+      "gene_name": "TCF7L2", 
+      "start": 114710009, 
+      "term": "TCF7L2", 
+      "type": "other"
+    }
+  ]
+}
+```
+
+#### FIELDS
+
+Field | Description
+----- | -----------
+chrom | The chromosome
+start | The start genomic position
+end | The end genomic position
+term | The term used as the query
+type | The type of query (egene, region, rs, other), as predicted by the parser
+
+Additional fields may be returned depending on the query type.
+
+#### QUERY PARAMS
+
+Param | Description
+----- | -----------
+q | A string value to search for
+build | A genome build identifier (GRCh37, GRCh38)
+
 ## Interval annotations
 
 These would be annotations that span intervals of the genome, such as enhancers, TFBSs, etc.
