@@ -186,7 +186,7 @@ Not yet implemented
 > Example: retrieve all association results in the FUSION study for T2D (analysis ID 1)
 
 ```shell
-curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1&limit=100&filter=analysis in '1'"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1" --data-urlencode "limit=100" --data-urlencode "&filter=analysis in '30'"
 ```
 
 ```json
