@@ -3,3 +3,4 @@ webhook
 *config-*.py
 *.pyc
 .ssh
+.env
