@@ -18,18 +18,18 @@ Simply replace `api` with `api_internal_dev` in any of the URLs below.
 
 ```shell
 # Production API
-curl "http://portaldev.sph.umich.edu/api/v1/statistic/single/"
+curl "https://portaldev.sph.umich.edu/api/v1/statistic/single/"
 
 # Development API
-curl "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/single/"
+curl "https://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/single/"
 ```
 
 # Common parameters
 
 To retrieve data from available resources, the HTTP GET requests are used with the optional parameters listed in the table below. The list of parameters and their format is based on the best practices from OData and JAX-RS specifications [1],[2].
 
-[1]: http://www.odata.org/documentation/
-[2]: http://jax-rs-spec.java.net
+[1]: https://www.odata.org/documentation/
+[2]: https://jax-rs-spec.java.net
 
 Parameter | Type | Description
 --------- | ---- | -----------
@@ -45,19 +45,19 @@ The filter parameter allows elimination of redundant resource’s entries using 
 
 Literal | Description
 ------- | -----------
-‘a string’ | Variable length character string.
+'a string' | Variable length character string.
 0.73, -0.73 | Floating point number.
 12, -12 | Integer number.
 
 Operator | Description | Example
 -------- | ----------- | -------
 eq | = | filter=analysis eq 1
-| | filter=variant eq ‘rs1234567’
+| | filter=variant eq 'rs1234567'
 gt | > | filter=refAlleleFreq gt 0.01
 lt | < | filter=pvalue lt 0.000000005
 ge | >= | filter=position ge 10000
 le | <= | filter=position le 20000
-in |  | filter=chromosome in ‘1’,’2’,’3’,’16’
+in |  | filter=chromosome in '1','2','3','16'
 and | & | filter=position ge 10000 and position le 20000
 
 Depending on the requirements, only part of the operators may be supported for a particular resource and its field.
@@ -117,7 +117,6 @@ Relative Resource URI | Description
 /annotation/intervals/results/ | Collection of all available genome interval annotations.
 /annotation/genes/sources/ | Collection of all available gene annotation resources.
 /annotation/genes/ | Collection of all annotated genes.
-/annotation/genes/names/ | Collection of all gene/transcript/exon names.
 /annotation/gwascatalog/ | Collection of GWAS catalogs
 /annotation/gwascatalog/results/ | Collection of GWAS catalogs
 
@@ -132,13 +131,13 @@ API endpoints for retrieving association statistics on single variants.
 `GET /statistic/single/`
 
 ```shell
-curl "http://portaldev.sph.umich.edu/api/v1/statistic/single/"
+curl "https://portaldev.sph.umich.edu/api/v1/statistic/single/"
 ```
 
 ```python
 import requests
 
-response = requests.get("http://portaldev.sph.umich.edu/api/v1/statistic/single/")
+response = requests.get("https://portaldev.sph.umich.edu/api/v1/statistic/single/")
 json = response.json()
 ```
 
@@ -147,12 +146,15 @@ json = response.json()
 ```json
 {
   "data": {
-    "analysis": [1,2,3],
-    "study": ["METSIM","FUSION","FUSION"],
-    "trait": ["T2D","T2D","fasting insulin"],
-    "tech": ["Illumina300K","Exome chip","Illumina 1M"],
-    "build": ["b36","b37","b37"],
-    "imputed": ["1000G","NA","HapMap"]
+    "analysis": [1, 2, 3],
+    "build": ["GRCh37", "GRCh37", "GRCh37"],
+    "date": ["2010-01-17", "2010-01-17", "2010-01-17"],
+    "first_author": ["Fritsche LG", "Welch R", "Willer CJ"],
+    "last_author": ["Willer CJ", "Abecasis GR", "Mohlke JL"],
+    "study": ["METSIM", "FUSION", "FUSION"],
+    "trait": ["T2D", "T2D", "fasting insulin"],
+    "tech": ["Illumina300K", "Exome chip", "Illumina 1M"],
+    "imputed": ["1000G", "NA", "HapMap"]
   },
   "lastPage": null
 }
@@ -162,7 +164,8 @@ json = response.json()
 
 Field | Description
 ----- | -----------
-analysis | Analysis unique identifier
+id | Analysis unique identifier
+analysis | Human-readable analysis label
 study | Study name
 trait | Trait name
 tech | Genotyping/sequencing technology
@@ -173,7 +176,7 @@ imputed | Reference panel used if data was imputed
 
 Filter | Description
 ------ | -----------
-analysis in 1,2,... | Selects set of analyses by unique ID
+id in 1,2,... | Selects set of analyses by unique ID
 
 #### SORT
 
@@ -186,18 +189,22 @@ Not yet implemented
 > Example: retrieve all association results in the FUSION study for T2D (analysis ID 1)
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1&limit=100&filter=analysis in '1'"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1" --data-urlencode "limit=100" --data-urlencode "filter=analysis in '99'"
 ```
 
 ```json
 {
   "data": {
-    "analysis": [1,1,1],
-    "id": ["chr4:1_A/G","chr4:2_C/T","chr4:3900_C/T"],
-    "chr": ["4","4","4"],
-    "position": [1,2,3900],
-    "pvalue": [0.6,0.01,0.000043],
-    "scoreTestStat": [0.2,5.4,3.6]
+    "analysis": [1, 1, 1],
+    "beta": [null, null, null],
+    "chromosome": ["4", "4", "4"],
+    "log_pvalue": [0.22, 2, 4.37],
+    "position": [1, 2, 3900],
+    "ref_allele": ["A", "C", "C"],
+    "ref_allele_freq": [null, null, null],
+    "score_test_stat": [0.2, 5.4, 3.6],
+    "se": [null, null, null],
+    "variant": ["4:1_A/G", "4:2_C/T", "4:3900_C/T"]
   },
   "lastPage": null
 }
@@ -206,15 +213,15 @@ curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data
 > Example: Retrieve association results from region 12:10001-20001 from the FUSION study for trait T2D. Include only variant name, position, and p-value columns. Sort by the position and p-value columns.
 
 ```shell
-curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1 & limit=100 & filter=analysis in 1 and chromosome in ‘12’ and position ge 10001 and position le 20001 & fields=variant, position, pvalue & sort=position, pvalue"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --data-urlencode "page=1" --data-urlencode "limit=100" --data-urlencode "filter=analysis in 1 and chromosome in '12' and position ge 10001 and position le 20001" --data-urlencode "fields=variant, position, log_pvalue"  --data-urlencode "sort=log_pvalue"
 ```
 
 ```json
 {
   "data": {
-    "variant": ["chr12:10001_A/G","chr12:10002_C/T","chr12:20000_G/T"],
-    "position": [10001,10002,20000],
-    "pvalue": [0.001,0.5,0.03]
+    "variant": ["12:10001_A/G", "12:10002_C/T", "12:20000_G/T"],
+    "position": [10001, 10002, 20000],
+    "log_pvalue": [0.001, 0.03, 0.5]
   },
   "lastPage": null
 }
@@ -225,35 +232,28 @@ curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/single/results/" --dat
 Field | Description
 ----- | -----------
 analysis | Analysis unique identifier
-variant | Variant unique name
+beta | Effect size
 chromosome | Chromosome
+log_pvalue | -log10 p-value
 position | Position in base pairs
-samples | Number of samples in the model
-refAllele | Reference allele
-altAllele | Alternate allele
-effectAllele | Effect allele
-effectAlleleFreq | Effect allele frequency
-effectAlleleCount | Effect allele count
-refGenotypeCount | Number of homozygous genotypes with reference allele
-hetGenotypeCount | Number of heterozygous genotypes
-altGenotypeCount | Number of homozygous genotypes with alternate allele
-effect | Effect size
-effectStdErr | Effect size standard error
-scoreStat | Score statistic
-pvalue | P-value
+ref_allele | Reference allele
+ref_allele_freq | Reference allele frequency
+score_test_stat | Score statistic
+se | Effect size standard error
+variant | Variant unique name (A string in the scheme {chrom}:{pos}_{ref}/{alt})
 
 #### FILTERS
 
 Filter | Description
 ------ | -----------
 analysis in 1, 2 | Select analysis by a unique identifier
-chromosome in ‘1’, ’22’, ’X’ | Select chromosomes by name.
+chromosome in '1', '22', 'X' | Select chromosomes by name.
 position ge 10000 | Start position in base-pairs of the interval of interest.
 position le 60000 | End position in base-pairs of the interval of interest.
 
 #### SORT
 
-Not yet implemented
+Add `&sort=field1,field2` to your URL. If the field is not present it will have no effect.
 
 ### PheWAS: all available results for a given variant
 
@@ -262,7 +262,7 @@ Not yet implemented
 ```shell
 # We're using format=objects here as it's probably the preferred way to retrieve the data.
 # The standard data frame / array of arrays layout is also available if you remove format=objects.
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?build=GRCh37&format=objects" --data-urlencode "filter=variant eq '10:114758349_C/T'"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/phewas/?build=GRCh37&format=objects" --data-urlencode "filter=variant eq '10:114758349_C/T'"
 ```
 
 > The JSON response will look like:
@@ -275,18 +275,20 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?bu
       "trait_group": "Metabolic disease",
       "trait_label": "Type 2 diabetes",
       "log_pvalue": 107.032,
-      "variant": "10:114758349_C/T"
+      "variant": "10:114758349_C/T",
       "chromosome": "10",
       "position": 114758349,
       "build": "GRCh37",
+      "beta": null,
       "ref_allele": "C",
       "ref_allele_freq": null,
       "score_test_stat": null,
+      "se": null,
       "study": "DIAGRAM",
       "description": "DIAGRAM 1000G T2D meta-analysis",
       "tech": null,
       "pmid": "28566273",
-      "trait": "T2D",
+      "trait": "T2D"
     }
   ],
   "lastPage": null,
@@ -303,18 +305,24 @@ curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/phewas/?bu
 Field | Description | Must exist in response for PheWAS module
 ----- | ----------- | ----------------------------------------
 id | Unique identifier for each dataset | Yes
+beta | Effect size |
 build | Genome build |
-variant | Variant
 chromosome | Chromosome for variant
-position | Position
+description | Description of analysis this dataset represents
 log_pvalue | -log10 p-value | Yes
+pmid | pmid | PubMed ID for paper if this dataset is published | 
+position | Position
+study | Study, consortium, or group that generated this analysis
+tech | Genotyping/sequencing technology
+ref_allele | Reference allele
+ref_allele_freq | Reference allele frequency
+score_test_stat | Score statistic
+se | Effect size standard error
+study | Study name |
 trait | Trait code. Example: "T2D"
 trait_label | Longer description of trait, e.g. "Type 2 diabetes" | Yes
 trait_group | Arbitrary grouping/category the trait belongs to, e.g. "metabolic diseases" | Yes
-description | Description of analysis this dataset represents
-study | Study, consortium, or group that generated this analysis
-tech | Genotyping/sequencing technology
-imputed | Reference panel used if data was imputed
+variant | Variant unique name (A string in the scheme {chrom}:{pos}_{ref}/{alt})
 
 #### PARAMETERS
 
@@ -342,58 +350,21 @@ build | Array of genome build(s) that were requested. Records returned will be o
 Not yet implemented
 
 ## Linkage disequilibrium
-
-### List all datasets/resources
-
-`GET /statistic/pair/LD/`
-
-> Example: list all available reference panels
-
-```shell
-curl "http://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/"
-```
-
-```json
-{
-  "data": {
-    "reference": [1,2,3,4],
-    "panel": ["1000G","1000G","1000G","HapMap"],
-    "population": ["JPT", "YRI", "EUR", "JPT"],
-    "build": ["b37","b37","b37","b36"],
-    "version": ["3","3","3","2"]
-  },
-  "lastPage": null
-}
-```
-
-#### FIELDS
-
-Field | Description
------ | -----------
-reference | Reference panel unique identifier
-panel | Reference panel name
-population | Population name
-build | Genome build
-version | Reference panel version
-
-#### FILTERS
-
-Filter | Description
------- | -----------
-reference in 1, 2 | Select reference by a unique identifier.
-
-#### SORT
-
-Not yet implemented
+The PortalDev API endpoint has been deprecated. We encourage you to explore the new Michigan LDServer. The interactive 
+"[LD playground](https://portaldev.sph.umich.edu/playground)" tool provides a concise overview of possible options. For
+ many practical applications (such as LocusZoom plots), the "variant correlations" feature is recommended. 
 
 ### Retrieve results
+
+**Although the endpoint documented below still exists, it is deprecated and may be removed in the future. The 
+documentation for this old endpoint is not maintained and is not guaranteed to be accurate.**
 
 `GET /statistic/pair/LD/results/`
 
 > Example: Retrieve all pair-wise LD D’ values between SNPs in the 12:10001-20001 region using 1000G EUR build 37 version 3 reference panel. Don’t sort the results. Retrieve only variant1, variant2 and value fields. Split results into pages of size 100. Start with the first page.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/results/" --data-urlencode "page=1&limit=100&filter=reference in 3 and chromosome1 in ‘12’ and position1 ge 10001 and position1 le 20001 and chromosome2 in ‘12’ and position2 ge 10001 and position2 le 20001 and type in ‘dprime’ & fields=variant2,variant2,value"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/results/" --data-urlencode "page=1" --data-urlencode "limit=100" --data-urlencode "filter=reference in 1 and chromosome1 in '12' and position1 ge 10001 and position1 le 20001 and chromosome2 in '12' and position2 ge 10001 and position2 le 20001 and type in 'dprime'" --data-urlencode "fields=variant2,variant2,value"
 ```
 
 ```json
@@ -410,7 +381,7 @@ curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/results/" --dat
 > Example: Retrieve pair-wise D’ LD values between SNP 12:10023 and all SNPs in the 12:10001-20001 region using 1000G EUR build 37 version 3 reference panel. Retrieve only variant2 and value columns. Split the results into pages of size 100. Start with the first page.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/results/" --data-urlencode "page=1&limit=100&filter=reference in 3 and variant1 in ’12:10023’ and chromosome2 in ’12’ and position ge 10001 and position le 20001 ant type in ‘dprime’ & fields=variant2,value"
+curl -G "https://portaldev.sph.umich.edu/api/v1/statistic/pair/LD/results/" --data-urlencode "page=1&limit=100&filter=reference in 3 and variant1 in '12:10023' and chromosome2 in '12' and position ge 10001 and position le 20001 and type in 'dprime'&fields=variant2,value"
 ```
 
 ```json
@@ -446,174 +417,13 @@ type | LD type: dprime, rsquare
 Filter | Description
 ------ | -----------
 reference in 1, 2 | Select reference by unique identifier.
-variant1 in ’12:1000’, ’12:1001’ | Select first variant by unique name.
-chromosome1 in ‘1’, ‘2’ | Select chromosome for the first variant.
+variant1 in '12:1000', '12:1001' | Select first variant by unique name.
+chromosome1 in '1', '2' | Select chromosome for the first variant.
 position1 ge 1000<br/>position1 le 2000 | Specify positions range (in base-pairs) for the first variant.
 variant2 | Select second variant by unique name.
-chromosome2 in ‘1’, ‘2’ | Select chromosome for the second variant.
+chromosome2 in '1', '2' | Select chromosome for the second variant.
 position2 ge 1000<br/>position2 le 2000 | Specify positions range (in base-pairs) for the second variant.
-type in ‘dprime’, ‘rsquare’ | Select type of LD coefficient.
-
-#### SORT
-
-Not yet implemented
-
-## Covariance
-
-### List all datasets/resources
-
-`GET /statistic/pair/ScoreCov/`
-
-> Example: Get all available studies that have covariance matrices of score statistics.
-
-```shell
-curl "http://portaldev.sph.umich.edu/api/v1/statistic/pair/ScoreCov/"
-```
-
-```json
-{
-  "data": {
-    "analysis": [1, 2, 3],
-    "study": ["FUSION", "FUSION", "MAGIC"],
-    "trait": ["t2d", "t2d", "fasting insulin"],
-    "tech": ["Illumina300K", "Exome-chip", "Illumina300K"],
-    "build": ["b37", "b37", "b36"],
-    "imputed": ["1000G", "NA", "HapMap"]
-  },
-  "lastPage": null
-}
-```
-
-> Example: Get available information about the covariance matrix available for the analysis with id equal to 1
-
-```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/pair/ScoreCov/" --data-urlencode "filter=analysis in 1"
-```
-
-```json
-{
-  "data": {
-    "analysis": [1],
-    "study": ["FUSION"],
-    "trait": ["t2d"],
-    "tech": ["Illumina300K"],
-    "build": ["b37"],
-    "imputed": ["imputed"]
-  },
-  "lastPage": null
-}
-```
-
-#### FIELDS
-
-Field | Description
------ | -----------
-analysis | Analysis unique name.
-study | Study name.
-trait | Trait name.
-tech | Genotyping/sequencing technology.
-build | Genome build version.
-imputed | Reference panel used for imputation.
-
-#### FILTERS
-
-Filter | Description
------- | -----------
-analysis in 1, 2 | Select analysis that have covariance information available by a unique identifier.
-
-### SORT
-
-Not yet implemented
-
-### Retrieve results
-
-`GET /statistic/pair/ScoreCov/results/`
-
-> Example: Retrieve covariance of score statistics between all SNPs in the 12:10001-20001 region from T2D association results in the FUSION study. Retrieve only variant1, variant2 and value fields. Split results into pages of size 100. Start with the first page.
-
-```
-curl -G "http://portaldev.sph.umich.edu/api/v1/statistic/pair/ScoreCov/results/" --data-urlencode "page=1&limit=100&filter=analysis in 1 and chromosome1 in ‘12’ and position1 ge 10001 and position1 le 20001 and chromosome2 in ‘12’ and position2 ge 10001 and position2 le 20001 & fields=variant1,variant2,value"
-```
-
-```json
-{
-  "data": {
-    "variant1": ["12:10001", "12:10001", "12:10002"],
-    "variant2": ["12:10002", "12:10003", "12:10003"],
-    "value": [0.30, 0.43, 0.12]
-  },
-  "lastPage": 12
-}
-```
-
-> Example: Retrieve covariance of score statistics between 12:10024 SNP and all SNPs in the 12:10001-20001 region from T2D association results in the FUSION study. Retrieve only variant2 and value fields. Split results into pages of size 100. Start with the first page.
-
-```shell
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/statistic/pair/ScoreCov/results/" --data-urlencode "page=1&limit=100&filter=analysis in 1 and varian1 in ’12:10024’ and chromosome2 in ‘12’ and position2 ge 10001 and position2 le 20001 & fields=variant2,value"
-```
-
-```json
-{
-  "data": {
-    "variant2": ["12:10001", "12:10002", "12:10003"],
-    "value": [0.55, 0.12, 0.77]
-  },
-  "lastPage": 10
-}
-```
-
-> Example: Extract covariance between all markers within the region chr1:762320-862320
-
-```shell
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/pair/ScoreCov/results/" --data-urlencode "filter=analysis in 4 and chromosome1 in '1' and position1 ge 762320 and position1 le 862320 and chromosome2 in '1' and position2 ge 762320 and position2 le 862320"
-```
-
-```python
-url = "http://portaldev.sph.umich.edu/api_internal_dev/v1/pair/ScoreCov/results/?filter=analysis in 4 and chromosome1 in '1' and position1 ge 762320 and position1 le 862320 and chromosome2 in '1' and position2 ge 762320 and position2 le 862320"
-
-resp = requests.get(url)
-
-data = resp.json()["data"]
-```
-
-```json
-{
-  "data": {
-    "variant_name1": ["1:762320_C/T","1:762320_C/T","1:861349_C/T"],
-    "chromosome1": ["1","1","1"],
-    "position1": [762320,762320,861349],
-    "variant_name2": ["1:762320_C/T","1:861349_C/T","1:861349_C/T"],
-    "chromosome2": ["1","1","1"],
-    "position2": [762320,861349,861349],
-    "statistic": [0.00060542,-4.39597E-7,0.00110772]},
-  "lastPage":null
-}
-```
-
-#### FIELDS
-
-Field | Description
------ | -----------
-analysis | Analysis unique name.
-variant1 | Variant unique name.
-chromosome1 | Chromosome name.
-position1 | Position in base-pairs.
-variant2 | Variant unique name.
-chromosome2 | Chromosome name.
-position2 | Position in base-pairs.
-value | Covariance value.
-
-#### FILTERS
-
-Filter | Description
------- | -----------
-analysis in 1, 2 | Select analysis by a unique identifier.
-variant1 in ’12:1001’, ’12:1002’ | Select first variant by unique name.
-chromosome1 in ‘1’, ‘2’, ‘X’ | Select chromosome for the first variant by name.
-position1 ge 1000<br/>position1 le 2000 | Select positions range (in base-pairs) for the first variant.
-variant2 in ’12:1001’, ’12:1002’ | Select second variant by unique name.
-chromosome2 in ‘1’, ‘2’, ‘X’ | Select chromosome for the second variant by name.
-position2 ge 1000<br/>position2 le 2000 | Select positions range (in base-pairs) for the first variant.
+type in 'dprime', 'rsquare' | Select type of LD coefficient.
 
 #### SORT
 
@@ -651,7 +461,7 @@ Add `&sort=field1,field2` to your URL.
 > Example: Retrieve recombination rates within a specific interval for a given dataset
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/recomb/results/" --data-urlencode "filter=id in 15 and chromosome eq '21' and position lt 10906989"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/recomb/results/" --data-urlencode "filter=id in 15 and chromosome eq '21' and position gt 10406989 and position lt 10906989"
 ```
 
 ```json
@@ -703,6 +513,66 @@ recomb_rate | Recombination rate
 
 Data can be sorted on any field by adding `&sort=field1,field2` onto your URL.
 
+## Search endpoints
+
+### Omnisearch
+
+Search for genomic coordinates given a rsID, gene, transcript, etc. The following example search formats are supported:
+
+* chr:position
+* chr:start-stop
+* chr:position+offset (-> chr:position-offset - chr:position+offset)
+* rs00001
+* rs00001+offset
+* gene symbol names
+* transcript names 
+
+Positions and offsets may have commas and use K and M suffixes.
+
+`GET /annotation/omnisearch/`
+
+> Example: Find gene positions by gene name
+
+```shell
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/omnisearch/"  --data-urlencode "q=TCF7L2" --data-urlencode "build=GRCh37"
+```
+
+```json
+{
+  "build": "grch37", 
+  "data": [
+    {
+      "chrom": "10", 
+      "end": 114927437, 
+      "gene_id": "ENSG00000148737.11", 
+      "gene_name": "TCF7L2", 
+      "start": 114710009, 
+      "term": "TCF7L2", 
+      "type": "other"
+    }
+  ]
+}
+```
+
+#### FIELDS
+
+Field | Description
+----- | -----------
+chrom | The chromosome
+start | The start genomic position
+end | The end genomic position
+term | The term used as the query
+type | The type of query (egene, region, rs, other), as predicted by the parser
+
+Additional fields may be returned depending on the query type.
+
+#### QUERY PARAMS
+
+Param | Description
+----- | -----------
+q | A string value to search for
+build | A genome build identifier (GRCh37, GRCh38)
+
 ## Interval annotations
 
 These would be annotations that span intervals of the genome, such as enhancers, TFBSs, etc.
@@ -714,7 +584,7 @@ These would be annotations that span intervals of the genome, such as enhancers,
 > Example: Retrieve a list of all available interval annotation resources.
 
 ```shell
-curl "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals/"
+curl "https://portaldev.sph.umich.edu/api/v1/annotation/intervals/"
 ```
 
 ```json
@@ -727,10 +597,10 @@ curl "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals/"
       "ChIP-seq"
     ],
     "build": [
-      "b37",
-      "b37",
-      "b37",
-      "b37"
+      "GRCh37",
+      "GRCh37",
+      "GRCh37",
+      "GRCh37"
     ],
     "cell_line": [
       null,
@@ -806,7 +676,7 @@ curl "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals/"
 > Example: Retrieve information about the interval annotation resource with id equal to 16.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals/" --data-urlencode "filter=id in 16"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/intervals/" --data-urlencode "filter=id in 16"
 ```
 
 ```json
@@ -891,63 +761,25 @@ Sort on any field using `sort=field1,field2`.
 > Retrieve annotations from dataset with id 16, on chromosome 2, with start positions < 19001
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api_internal_dev/v1/annotation/intervals/results/" --data-urlencode "filter=id in 16 and chromosome eq '2' and start < 19001"
+curl -G https://portaldev.sph.umich.edu/api/v1/annotation/intervals/results/ --data-urlencode "filter=id in 19 and chromosome eq '10' and start le 115067678 and end ge 114550452"
 ```
 
 ```json
 {
   "data": {
-    "chromosome": [
-      "2",
-      "2",
-      "2",
-      "2",
-      "2"
-    ],
-    "end": [
-      11400,
-      12000,
-      18600,
-      19000,
-      19200
-    ],
-    "id": [
-      16,
-      16,
-      16,
-      16,
-      16
-    ],
-    "public_id": [
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    "start": [
-      0,
-      11400,
-      12000,
-      18600,
-      19000
-    ],
-    "state_id": [
-      13,
-      8,
-      13,
-      8,
-      5
-    ],
+    "chromosome": ["10", "10", "10", "10"],
+    "end": [114574010, 114574210, 114575010, 114575210],
+    "id": [19, 19, 19, 19],
+    "public_id": [null, null, null, null],
+    "start": [114516210, 114574010, 114574210, 114575010],
+    "state_id": [13, 7, 13, 7],
     "state_name": [
       "Heterochromatin / low signal",
       "Insulator",
       "Heterochromatin / low signal",
-      "Insulator",
-      "Strong enhancer"
+      "Insulator"
     ],
     "strand": [
-      null,
       null,
       null,
       null,
@@ -970,14 +802,13 @@ chromosome | Chromosome
 start | Start of interval (in bp)
 end | End of interval (in bp)
 strand | DNA strand that the interval is annotated to (if applicable)
-annotation | An object of key/value pairs of annotations specific to an interval region
 
 #### FILTERS
 
 Filter | Description
 ------ | -----------
 id in 1, 2 | Select interval annotation resource by a unique identifier.
-chromosome in ‘1’, ‘2’, ‘X’ | Select chromosome by name.
+chromosome in '1', '2', 'X' | Select chromosome by name.
 start ge 10000<br/>start le 20000 | Select interval if its start position falls into the specified interval.
 end ge 10000<br/>end le 20000 | Select interval if its end position falls into the specified interval.
 
@@ -1002,85 +833,36 @@ Currently we only include ENSEMBL/GENCODE.
 > Example: retrieve all gene annotation sources
 
 ```shell
-curl "http://portaldev.sph.umich.edu/api/v1/annotation/genes/sources/"
+curl "https://portaldev.sph.umich.edu/api/v1/annotation/genes/sources/?format=objects"
 ```
 
 ```json
 {
   "data": [
     {
-      "source_id" : 1,
-      "source_name" : "gencode",
-      "version" : "Release_23",
-      "build" : "GRCh38.p3"
-    },
+      "genome_build": "GRCh38", 
+      "id": 1, 
+      "organism": "human", 
+      "source": "gencode", 
+      "taxid": 9606, 
+      "version": "27"
+    }, 
     {
-      "source_id" : 2,
-      "source_name" : "gencode",
-      "version" : "Release_22",
-      "build" : "GRCh38.p3"
+      "genome_build": "GRCh37", 
+      "id": 2, 
+      "organism": "human", 
+      "source": "gencode", 
+      "taxid": 9606, 
+      "version": "19"
+    }, 
+    {
+      "genome_build": "GRCh37", 
+      "id": 3, 
+      "organism": "human", 
+      "source": "gencode", 
+      "taxid": 9606, 
+      "version": "27"
     }
-  ]
-}
-```
-
-#### FIELDS
-
-Field | Description
------ | -----------
-source_id | Annotation resource unique id.
-source_name | Annotation resource name.
-version | Annotation resource version.
-build | Annotation resource genome build.
-
-### Retrieve gene information
-
-`GET /annotation/genes/`
-
-> Retrieve all gene annotation data.
-
-```shell
-curl "http://portaldev.sph.umich.edu/api/v1/annotation/genes/"
-```
-
-```json
-{
-  "data": [
-  {
-    "gene_id": "ENSG00000223972.5",
-    "gene_name": "DDX11L1",
-    "chromosome": "chr1",
-    "start": "11869",
-    "end": "14409",
-    "strand": "+",
-    "transcripts": [
-    {
-      "transcript_id": "ENST00000456328.2",
-      "transcript_name": "DDX11L1-002",
-      "start": "11869",
-      "end": "14409",
-      "exons": [
-        { "exon_id": "ENSE00002234944.1", "start": " 11869", "end": " 12227" },
-        { "exon_id": "ENSE00003582793.1", "start": " 12613", "end": " 12721" },
-        { "exon_id": "ENSE00002312635.1", "start": " 13221", "end": " 14409" },
-      ]
-    },
-    {
-      "transcript_id": "ENST00000450305.2",
-      "transcript_name": "DDX11L1-001",
-      "start": "12010",
-      "end":"13670",
-      "exons": [
-        { "exon_id": "ENSE00001948541.1", "start": "12010", "end": "12057" },
-        { "exon_id": "ENSE00001671638.2", "start": "12179", "end": "12227" },
-        { "exon_id": "ENSE00001758273.2", "start": "12613", "end": "12697" },
-        { "exon_id": "ENSE00001799933.2", "start": "12975", "end": "13052" },
-        { "exon_id": "ENSE00001746346.2", "start": "13221", "end": "13374" },
-        { "exon_id": "ENSE00001863096.1", "start": "13453", "end": "13670" }
-      ]
-    }
-    ]
-  }
   ],
   "lastPage": null
 }
@@ -1090,55 +872,70 @@ curl "http://portaldev.sph.umich.edu/api/v1/annotation/genes/"
 
 Field | Description
 ----- | -----------
-source | Genes annotation resource id.
-name | Gene name (non-unique).
-id | Gene unique id.
-chrom | Chromosome name.
-region-start | Gene start position.
-region-end | Gene end position.
-strand | Gene strand
+id | Annotation resource unique id.
+genome_build | Annotation resource genome build.
+organism |
+source | Annotation resource name.
+taxid |
+version | Annotation resource version.
 
-#### FILTERS
+### Retrieve gene information
 
-Filter | Description
------- | -----------
-source in 1, 2 | Selects gene annotation source by a unique identifier.
-name in ‘APOE’, ‘TCF7L2’ | Selects gene annotation by non-unique display name(s).
-id in ‘ENSG00000223972.5’, ‘ENSG00000227232.5’ | Selects gene annotation by unique gene ID(s).
-chrom eq ‘chr20’ | Selects gene annotation that lie within a chromosome.
-start ge 20000000 | Selects gene annotation with start positions greater than a certain value.
-end le 20100000 | Selects gene annotation with end positions less than a certain value.
+`GET /annotation/genes/`
 
-#### SORT
-
-Not yet implemented
-
-### Retrieve gene names
-
-`GET /annotation/genes/names/`
-
-> Example: retrieve all searchable regions that begin with the string ‘TCF’.
+> Retrieve all gene annotation data.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/genes/names/" --data-urlencode "filter=name startswith ‘TCF’"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/genes/" --data-urlencode "filter=source in 3 and chrom eq '10' and start le 115067678 and end ge 114550452"
 ```
 
 ```json
 {
   "data": [
-  {
-    "region" : "TCF7",
-    "label" : "gene_name"
-  },
-  {
-    "region" : "TCF7-001",
-    "label" : "transcript_name"
-  },
-  {
-    "region" : "TCF7-002",
-    "label" : "transcript_name"
-  }
-  ]
+    {
+      "chrom": "10", 
+      "end": 114578503, 
+      "exons": [
+        {
+          "chrom": "10", 
+          "end": 114207225, 
+          "exon_id": "ENSE00001449955.2_1", 
+          "start": 114206756, 
+          "strand": "+"
+        }, 
+        {
+          "chrom": "10", 
+          "end": 114207225, 
+          "exon_id": "ENSE00001882813.1_1", 
+          "start": 114206757, 
+          "strand": "+"
+        }
+      ], 
+      "gene_id": "ENSG00000151532.13_2", 
+      "gene_name": "VTI1A", 
+      "start": 114206756, 
+      "strand": "+", 
+      "transcripts": [
+        {
+          "chrom": "10", 
+          "end": 114210484, 
+          "exons": [
+            {
+              "chrom": "10", 
+              "end": 114207225, 
+              "exon_id": "ENSE00001449955.2_1", 
+              "start": 114206756, 
+              "strand": "+"
+            }
+          ], 
+          "start": 114206992, 
+          "strand": "+", 
+          "transcript_id": "ENST00000489142.5_1"
+        }
+      ]
+    }
+  ], 
+  "lastPage": null
 }
 ```
 
@@ -1146,14 +943,25 @@ curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/genes/names/" --data-u
 
 Field | Description
 ----- | -----------
-region | Gene/transcript/exon name.
-label | Type of region: "gene_name", "transcript_name", "exon_name".
+source | Genes annotation resource id (used for queries)
+gene_name | Gene name (non-unique).
+gene_id | Gene unique id.
+chrom | Chromosome name.
+start | Gene start position.
+end | Gene end position.
+strand | Gene strand
+transcripts | A nested object defining available transcripts, and each exon within each transcript
 
 #### FILTERS
 
 Filter | Description
 ------ | -----------
-name startswith ‘TCF’, ‘ENSG00001’, ‘ENSG’ | Selects all gene_id, gene_name, transcript_id, transcript_name, and exon_id that start with a string.
+source in 1, 2 | Selects gene annotation source by a unique identifier.
+gene_name in 'APOE', 'TCF7L2' | Selects gene annotation by non-unique display name(s).
+gene_id in 'ENSG00000223972.5', 'ENSG00000227232.5' | Selects gene annotation by unique gene ID(s).
+chrom eq 'chr20' | Selects gene annotation that lie within a chromosome.
+start ge 20000000 | Selects gene annotation with start positions greater than a certain value.
+end le 20100000 | Selects gene annotation with end positions less than a certain value.
 
 #### SORT
 
@@ -1170,7 +978,7 @@ We currently support the EBI GWAS catalog, and the UK BioBank GWAS hits.
 > Example: retrieve all GWAS catalogs
 
 ```shell
-curl "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/"
+curl "https://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/"
 ```
 
 ```json
@@ -1204,7 +1012,7 @@ curl "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/"
 > Or alternatively in object mode:
 
 ```shell
-curl "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/?format=objects"
+curl "https://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/?format=objects"
 ```
 
 ```json
@@ -1248,7 +1056,7 @@ date_inserted | Date the GWAS catalog was inserted into the database
 Understanding the format is easier in object mode, so we use that below.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and chrom eq '10' and pos le 112998595 and pos ge 112998585"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and chrom eq '10' and pos le 112998595 and pos ge 112998585"
 ```
 
 ```json
@@ -1290,13 +1098,13 @@ One record is returned per variant * trait * pmid. The same variant <--> trait a
 > In this example, assume the GWAS catalog with ID 1 is a GRCh38 catalog.
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and variant eq '10:112998590_C/T'"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and variant eq '10:112998590_C/T'"
 ```
 
 > You can also retrieve by rsID instead of a variant:
 
 ```shell
-curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and rsid eq 'rs7903146'"
+curl -G "https://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?format=objects" --data-urlencode "filter=id eq 1 and rsid eq 'rs7903146'"
 ```
 
 #### FIELDS
@@ -1304,20 +1112,22 @@ curl -G "http://portaldev.sph.umich.edu/api/v1/annotation/gwascatalog/results/?f
 Field | Description
 ----- | -----------
 id | GWAS catalog ID
-variant | Variant in chr:pos_ref/alt format
-rsid | rsID of the variant
-chrom | Chromosome
-pos | Position
-ref | Reference allele
 alt | Alternate allele
-trait | Name of the trait/phenotype/disease
-trait_group | Grouping of traits as defined by the catalog
-risk_allele | Specifies allele for effect direction and risk frequency
-risk_frq | Frequency of risk allele
+chrom | Chromosome
+first_author | First author of the publication reporting this association
 log_pvalue | -log10 p-value for association between variant and trait
 or_beta | Effect size (or odds ratio if binary trait)
 pmid | PubMed ID for the publication reporting this association
-first_author | First author of the publication reporting this association
+pos | Position
+pubdate | Publication date (YYYY-MM-DD)
+ref | Reference allele
+risk_allele | Specifies allele for effect direction and risk frequency
+risk_frq | Frequency of risk allele
+rsid | rsID of the variant
+study | A human-readable description of the study
+trait | Name of the trait/phenotype/disease
+trait_group | Grouping of traits as defined by the catalog
+variant | Variant in chr:pos_ref/alt format
 
 #### FILTERS
 
