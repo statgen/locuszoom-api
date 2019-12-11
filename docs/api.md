@@ -12,6 +12,10 @@ search: true
 
 This document contains the specification for the UM data API, used by LocusZoom and other tools under development at the Center for Statistical Genetics, University of Michigan.
 
+Our API naturally evolves over time as key data is revised. Most annotations (genes, recombination, LD) now support 
+both build GRCh37 and build GRCh38. We encourage you to explore the provided metadata endpoints to find the newest and best 
+annotations that match your data.
+
 # Production or development API
 
 Simply replace `api` with `api_internal_dev` in any of the URLs below.
@@ -57,7 +61,7 @@ gt | > | filter=refAlleleFreq gt 0.01
 lt | < | filter=pvalue lt 0.000000005
 ge | >= | filter=position ge 10000
 le | <= | filter=position le 20000
-in |  | filter=chromosome in '1','2','3','16'
+in | | filter=chromosome in '1','2','3','16'
 and | & | filter=position ge 10000 and position le 20000
 
 Depending on the requirements, only part of the operators may be supported for a particular resource and its field.
@@ -104,10 +108,7 @@ Relative Resource URI | Description
 /statistic/single/ | Collection of all available studies that have single variant association results.
 /statistic/single/results/ | Collection of all single variant association results.
 /statistic/phewas/ | Return all available association statistics given a variant.
-/statistic/pair/LD/ | Collection of all datasets that have available linkage disequilibrium information or that can be used to compute linkage disequilibrium.
 /statistic/pair/LD/results/ | Collection of pair-wise linkage disequilibrium coefficients between all variants.
-/statistic/pair/ScoreCov/ | Collection of all datasets that have available covariance matrices between single variant score test statistics.
-/statistic/pair/ScoreCov/results/ | Collection of covariance values between all single variant score test statistics.
 /annotation/recomb/ | Recombination rates
 /annotation/variant/ | Collection of all available single variant annotations.
 /annotation/snps/ | List all dbSNP datasets
