@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
 from glob import glob
+import os
 import gzip
 import psycopg2
 
@@ -17,6 +18,13 @@ def get_settings():
   p.add_argument("--user")
 
   args = p.parse_args()
+
+  args.host = args.host if args.host is not None else os.environ["POSTGRES_HOST"]
+  args.port = args.port if args.port is not None else os.environ["POSTGRES_PORT"]
+  args.user = args.user if args.user is not None else os.environ["POSTGRES_USER"]
+  args.connect_db = args.connect_db if args.connect_db is not None else os.environ["POSTGRES_CONNECT_DB"]
+  args.database = args.database if args.database is not None else os.environ["POSTGRES_TEST_DB"]
+
   return args
 
 if __name__ == "__main__":
