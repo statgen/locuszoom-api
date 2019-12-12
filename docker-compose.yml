@@ -5,11 +5,10 @@ services:
       context: .
       args:
         - LZAPI_VERSION
-        - BUILD_DATE
         - GIT_SHA
     image: "locuszoom-api"
-    env_file:
-      - .env/api.env
+    ports:
+      - "${LZAPI_PORT}"
     volumes:
       - ./etc:/home/locuszoom-api/etc
     depends_on:
