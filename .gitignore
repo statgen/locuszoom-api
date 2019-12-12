@@ -1,4 +1,5 @@
 venv/
+bin/backup.py
 webhook
 *config-*.py
 *.pyc
