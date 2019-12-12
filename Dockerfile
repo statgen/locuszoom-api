@@ -1,6 +1,5 @@
 FROM ubuntu:18.04
 
-ARG BUILD_DATE
 ARG GIT_SHA
 ARG LZAPI_VERSION
 
@@ -12,7 +11,6 @@ LABEL org.label-schema.url="https://github.com/statgen/locuszoom-api"
 LABEL org.label-schema.usage="https://portaldev.sph.umich.edu/docs/api/v1/"
 LABEL org.label-schema.vcs-url="https://github.com/statgen/locuszoom-api"
 LABEL org.label-schema.vcs-ref=$GIT_SHA
-LABEL org.label-schema.build-date=$BUILD_DATE
 LABEL org.label-schema.schema-version="1.0"
 
 RUN apt-get update && apt-get install -y \
