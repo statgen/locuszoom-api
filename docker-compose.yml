@@ -1,0 +1,27 @@
+version: '3'
+services:
+  api:
+    build: 
+      context: .
+      args:
+        - LZAPI_VERSION
+        - BUILD_DATE
+        - GIT_SHA
+    image: "locuszoom-api"
+    env_file:
+      - .env/api.env
+    volumes:
+      - ./etc:/home/locuszoom-api/etc
+    depends_on:
+      - redis
+      - postgres
+    working_dir: /home/locuszoom-api
+    command: python3 bin/run_gunicorn.py
+
+  postgres:
+    image: "postgres:9.4"
+    expose:
+      - 5432
+
+  redis:
+    image: "redis:alpine"
