@@ -20,8 +20,6 @@ services:
 
   postgres:
     image: "postgres:9.4"
-    expose:
-      - 5432
 
   redis:
     image: "redis:alpine"
