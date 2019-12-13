@@ -7,6 +7,8 @@ services:
         - LZAPI_VERSION
         - GIT_SHA
     image: "locuszoom-api"
+    env_file:
+      - .env
     ports:
       - "${LZAPI_PORT}"
     volumes:
