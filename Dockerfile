@@ -19,7 +19,8 @@ RUN apt-get update && apt-get install -y \
   python3 \
   python3-pip \
   zlib1g-dev \
-  liblzma-dev
+  liblzma-dev \
+  git
 
 # Install python dependencies first so docker can cache them
 COPY requirements.txt /
