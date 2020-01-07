@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${LZAPI_PORT}"
+      - "${LZAPI_PORT}:${LZAPI_PORT}"
     volumes:
       - ./etc:/home/locuszoom-api/etc
     depends_on:
