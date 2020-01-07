@@ -33,5 +33,8 @@ COPY --chown=lzapi:lzapi . /home/locuszoom-api
 WORKDIR /home/locuszoom-api
 RUN pip3 install -e .
 
+# Declare volume
+VOLUME /home/locuszoom-api
+
 # Switch to user
 USER lzapi
