@@ -1,3 +1,4 @@
 .env
+etc
 bin/backup.py
 docker-compose.*.yml
