@@ -19,7 +19,6 @@ services:
       - "${LZAPI_PORT}:${LZAPI_PORT}"
     volumes:
       - lzvol:/home/locuszoom-api
-      - ./etc:/home/locuszoom-api/etc
     depends_on:
       - redis
       - postgres
