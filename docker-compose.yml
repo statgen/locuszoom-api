@@ -3,6 +3,7 @@ version: '3'
 volumes:
   pgdata: {}
   lzvol: {}
+  redisvol: {}
 
 services:
   api:
@@ -34,3 +35,5 @@ services:
 
   redis:
     image: "redis:5.0.7"
+    volumes:
+      - redisvol:/data
