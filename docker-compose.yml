@@ -6,7 +6,7 @@ volumes:
 
 services:
   api:
-    build: 
+    build:
       context: .
       args:
         - LZAPI_VERSION
