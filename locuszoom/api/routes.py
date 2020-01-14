@@ -134,8 +134,40 @@ def reshape_data(rows,fields,field_to_cols=None,style="table"):
 
   return data
 
+def stringify_float(f):
+  if f is None:
+    return f
+
+  if math.isinf(f):
+    if f < 0:
+      return "-Infinity"
+    else:
+      return "Infinity"
+
+  return f
+
+def get_float_columns(proxy):
+  # 700 and 701 are the OIDs for real and double precision from postgres
+  if hasattr(proxy, "cursor"):
+    return [x.name for x in proxy.cursor.description if x.type_code in (700, 701)]
+  elif hasattr(proxy, "description"):
+    return [x.name for x in proxy.description if x.type_code in (700, 701)]
+  elif isinstance(proxy, list):
+    fcols = []
+    for col, v in proxy[0].items():
+      if isinstance(v, float):
+        fcols.append(col)
+
+    return fcols
+  else:
+    raise ValueError("Unexpected data type for container of database rows")
+
 def rows_to_arrays(cur,fields,cols_to_field):
   data = OrderedDict()
+
+  # Figure out which columns contain floating point data
+  float_cols = get_float_columns(cur)
+
   for i, row in enumerate(cur):
     for col in fields:
       # Some of the database column names don't match field names.
@@ -145,9 +177,17 @@ def rows_to_arrays(cur,fields,cols_to_field):
         for k, v in val.items():
           if k not in data:
             data[k] = [None] * i
-          data[k].append(v)
+
+          if col in float_cols:
+            data[k].append(stringify_float(v))
+          else:
+            data[k].append(v)
       else:
-        data.setdefault(field,[]).append(row[col])
+        v = row[col]
+        if col in float_cols:
+          v = stringify_float(v)
+
+        data.setdefault(field,[]).append(v)
 
   if not data:
     # No data was found so fill with empty arrays
@@ -159,6 +199,10 @@ def rows_to_arrays(cur,fields,cols_to_field):
 
 def rows_to_objects(cur,fields,cols_to_field):
   data = []
+
+  # Figure out which columns contain floating point data
+  float_cols = get_float_columns(cur)
+
   for row in cur:
     rowdict = dict(row)
     finaldict = dict()
@@ -168,6 +212,11 @@ def rows_to_objects(cur,fields,cols_to_field):
       # Translate from database column to field name
       field = cols_to_field.get(col,col)
       finaldict[field] = rowdict[col]
+
+    # Floats need special care to fix bad JSON encoding for infinity and other values
+    for col in float_cols:
+      if finaldict[col] is not None:
+        finaldict[col] = stringify_float(finaldict[col])
 
     data.append(finaldict)
 
