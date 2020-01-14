@@ -1,6 +1,22 @@
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from flask import current_app, g
+#import psycopg2
+#import math
+
+#def handle_float(value, cur):
+  #"""
+  #Translate real/double precision values from database into valid JSON.
+  #"""
+
+  #if value == "Infinity":
+    #return "Infinity"
+  #elif value == "-Infinity":
+    #return "-Infinity"
+  #elif value is None:
+    #return None
+  #else:
+    #return float(value)
 
 def before_request():
   db = getattr(g,"db",None)
@@ -38,3 +54,7 @@ def close_db(*args):
 def init_app(app):
   app.before_request(before_request)
   app.teardown_appcontext(close_db)
+
+  # Map real (OID 700) and double precision (OID 701) to float type that parses correctly for JSON format
+  #float_json = psycopg2.extensions.new_type((700, 701), "FLOAT_JSON", handle_float)
+  #psycopg2.extensions.register_type(float_json)
