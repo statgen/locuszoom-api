@@ -24,13 +24,3 @@ install:
 
 script:
 - LZAPI_MODE="travis" pytest tests
-
-deploy:
-  - provider: script
-    on:
-      branch: dev
-    script: >-
-      echo 'portaldev.sph.umich.edu,141.211.55.39 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPL7VSNerzp1ViF0rU9gLnWeAKNZ5kRM2/YGrmylzqVe' >> $HOME/.ssh/known_hosts &&
-      openssl aes-256-cbc -K $encrypted_ea4d2d5992dd_key -iv $encrypted_ea4d2d5992dd_iv -in .ssh/portaldev_deploy.enc -out .ssh/portaldev_deploy -d &&
-      chmod 600 .ssh/portaldev_deploy &&
-      ssh -vv -i .ssh/portaldev_deploy lzapi@portaldev.sph.umich.edu dev
