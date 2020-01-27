@@ -4,12 +4,6 @@ import gzip
 import requests
 import time
 
-# This script is necessary to get postgres to switch from a custom execution plan
-# to a generic one for each PheWAS query.  The process unfortunately requires 5
-# executions of the query, and appears to be per-session. Therefore, you should
-# let this script run for some time, until queries appear to be executing quickly
-# for all random variants.
-
 API_URL = "http://{host}:{port}/v1/statistic/phewas/"
 
 VARIANTS = """
@@ -127,22 +121,33 @@ class Timer:
 def get_settings():
   from argparse import ArgumentParser
   p = ArgumentParser()
-  p.add_argument("-p","--port")
+  p.add_argument("--port",type=int,default="7000")
+  p.add_argument("--host",type=str,default="localhost")
+  p.add_argument("--wait",type=int,default=0,help="Amount of time to wait between requests. Default is 0 seconds (no wait).")
   return p.parse_args()
 
 if __name__ == "__main__":
   args = get_settings()
-  sample = [random.choice(VARIANTS) for _ in range(100)]
-  url = API_URL.format(host="localhost",port=args.port)
-  for v in sample:
-    print(f"Variant {v}")
-    for i in range(10):
-      with Timer() as t:
-        try:
-          resp = requests.get(url,params={"filter": "variant eq ''","format": "objects","build": ["GRCh37","GRCh38"]})
-        except:
-          print(f"Query {i} failed")
-          continue
 
-      print(f"Query {i} required {t.elapsed}")
-      time.sleep(1)
+  if args.port < 0 or args.port > 65535:
+    raise ValueError(f"Invalid port {args.port}")
+
+  while 1:
+    sample = [random.choice(VARIANTS) for _ in range(100)]
+    url = API_URL.format(host=args.host,port=args.port)
+    for v in sample:
+      print(f"Variant {v}")
+      for i in range(3):
+        time.sleep(args.wait + 0.01)
+        with Timer() as t:
+          try:
+            resp = requests.get(url,params={"filter": f"variant eq '{v}'","format": "objects","build": "GRCh37"})
+          except:
+            print(f"Query {i} failed")
+            continue
+
+          if not resp.ok:
+            print(f"Query {i} failed")
+
+        size = len(resp.content) / 1000.0
+        print(f"Query {i} required {t.elapsed} and returned {size} KB")
