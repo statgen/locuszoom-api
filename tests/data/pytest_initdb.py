@@ -19,11 +19,11 @@ def get_settings():
 
   args = p.parse_args()
 
-  args.host = args.host if args.host is not None else os.environ["POSTGRES_HOST"]
-  args.port = args.port if args.port is not None else os.environ["POSTGRES_PORT"]
-  args.user = args.user if args.user is not None else os.environ["POSTGRES_USER"]
-  args.connect_db = args.connect_db if args.connect_db is not None else os.environ["POSTGRES_CONNECT_DB"]
-  args.database = args.database if args.database is not None else os.environ["POSTGRES_TEST_DB"]
+  args.host = args.host if args.host is not None else os.environ.get("POSTGRES_HOST")
+  args.port = args.port if args.port is not None else os.environ.get("POSTGRES_PORT")
+  args.user = args.user if args.user is not None else os.environ.get("POSTGRES_USER")
+  args.connect_db = args.connect_db if args.connect_db is not None else os.environ.get("POSTGRES_CONNECT_DB")
+  args.database = args.database if args.database is not None else os.environ.get("POSTGRES_TEST_DB")
 
   return args
 
@@ -31,15 +31,17 @@ if __name__ == "__main__":
   args = get_settings()
 
   # Connect to postgres and create the database.
-  init_con = psycopg2.connect(database=args.connect_db, host=args.host, port=args.port, user=args.user)
-  init_con.autocommit = True
-  init_cur = init_con.cursor()
+  if args.connect_db is not None:
+    init_con = psycopg2.connect(database=args.connect_db, host=args.host, port=args.port, user=args.user)
+    init_con.autocommit = True
+    init_cur = init_con.cursor()
 
-  # Create the testing database, dropping it if it already exists.
-  init_cur.execute(f"DROP DATABASE IF EXISTS {args.database}")
-  init_cur.execute(f"CREATE DATABASE {args.database}")
+    # Create the testing database, dropping it if it already exists.
+    init_cur.execute(f"DROP DATABASE IF EXISTS {args.database}")
+    init_cur.execute(f"CREATE DATABASE {args.database}")
 
   # Re-connect to the database.
+  print(f"Connecting to PostgresDB - database {args.database} • host {args.host} • port {args.port} • user {args.user}")
   con = psycopg2.connect(database=args.database, host=args.host, port=args.port, user=args.user)
   con.autocommit = True
   cur = con.cursor()
