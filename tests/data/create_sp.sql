@@ -22,8 +22,8 @@ RETURNS TABLE(
 	ref_allele TEXT,
 	ref_allele_freq REAL,
 	log_pvalue REAL,
-	beta REAL,
-	se REAL,
+	beta DOUBLE PRECISION,
+	se DOUBLE PRECISION,
 	score_test_stat DOUBLE PRECISION
 ) AS
 $$

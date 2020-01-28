@@ -29,8 +29,8 @@ CREATE TABLE rest.assoc_results (
  ref_allele TEXT NOT NULL,
  ref_freq REAL,
  log_pvalue REAL NOT NULL,
- beta REAL,
- se REAL,
+ beta DOUBLE PRECISION,
+ se DOUBLE PRECISION,
  score_stat DOUBLE PRECISION,
  effect_allele TEXT,
  noneffect_allele TEXT
@@ -48,7 +48,7 @@ CREATE TABLE rest.recomb_results (
   chromosome text NOT NULL,
   position BIGINT NOT NULL,
   recomb_rate REAL NOT NULL,
-  pos_cm REAL NOT NULL
+  pos_cm REAL
 );
 
 CREATE TABLE rest.interval (
