@@ -2,3 +2,4 @@
 etc
 bin/backup.py
 docker-compose.*.yml
+**/*.pyc
