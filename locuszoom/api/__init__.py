@@ -1,4 +1,4 @@
-import os, datetime
+import os, datetime, logging
 from flask import Flask, g
 from flask_cors import CORS
 from flask_compress import Compress
