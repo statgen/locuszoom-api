@@ -2,7 +2,7 @@ version: '3'
 
 volumes:
   pgdata: {}
-  lzvol: {}
+  lzlogs: {}
   redisvol: {}
 
 services:
@@ -18,7 +18,7 @@ services:
     ports:
       - "${LZAPI_PORT}:${LZAPI_PORT}"
     volumes:
-      - lzvol:/home/locuszoom-api
+      - lzlogs:/home/locuszoom-api/logs
     depends_on:
       - redis
       - postgres

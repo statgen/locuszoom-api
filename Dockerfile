@@ -30,11 +30,9 @@ RUN pip3 install -r requirements.txt
 RUN adduser --gecos "User for running LocusZoom API as non-root" --shell /bin/bash --disabled-password lzapi
 
 COPY --chown=lzapi:lzapi . /home/locuszoom-api
+RUN mkdir -p /home/locuszoom-api/logs && chown lzapi:lzapi /home/locuszoom-api/logs
 WORKDIR /home/locuszoom-api
 RUN pip3 install -e .
-
-# Declare volume
-VOLUME /home/locuszoom-api
 
 # Switch to user
 USER lzapi
