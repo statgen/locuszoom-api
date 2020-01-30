@@ -54,4 +54,14 @@ def create_app():
   # JSON encoder for datetimes
   app.json_encoder = CustomJSONEncoder
 
+  # If gunicorn is attached, route loggers there
+  try:
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+  except Exception as e:
+    app.logger.warning("Could not attach to gunicorn logger: " + str(e))
+
+  app.logger.info("Flask app initialized")
+
   return app

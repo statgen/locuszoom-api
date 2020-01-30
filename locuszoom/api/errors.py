@@ -37,8 +37,12 @@ def handle_all(error):
     raise
 
   # Also log the exception to the console.
-  print(("Exception thrown while handling request: " + request.url))
-  traceback.print_exc()
+  current_app.logger.error("Exception thrown while handling request: " + request.url)
+  if isinstance(error,Exception):
+    current_app.logger.error("Exception type: " + str(type(error)))
+    current_app.logger.error("Exception message: " + str(error))
+    current_app.logger.error("Exception traceback: ")
+    current_app.logger.error("".join((traceback.format_tb(error.__traceback__))))
 
   if isinstance(error,ParseException):
     message = "Incorrect syntax in filter string, error was: " + error.msg
