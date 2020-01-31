@@ -215,7 +215,7 @@ def rows_to_objects(cur,fields,cols_to_field):
 
     # Floats need special care to fix bad JSON encoding for infinity and other values
     for col in float_cols:
-      if finaldict[col] is not None:
+      if finaldict.get(col) is not None:
         finaldict[col] = stringify_float(finaldict[col])
 
     data.append(finaldict)
