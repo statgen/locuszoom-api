@@ -4,7 +4,7 @@ from collections import OrderedDict
 from sqlalchemy import text
 from flask import g, jsonify, request, Blueprint, current_app
 from locuszoom.api import sentry
-from locuszoom.api.json import JSONFloat
+from locuszoom.api.jsonutil import JSONFloat
 from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
 from locuszoom.api.models.gene import Gene, Transcript, Exon
 from locuszoom.api.cache import RedisIntervalCache

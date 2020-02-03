@@ -2,7 +2,7 @@ import os, datetime, logging
 from flask import Flask, g
 from flask_cors import CORS
 from flask_compress import Compress
-from locuszoom.api.json import CustomJSONEncoder
+from locuszoom.api.jsonutil import CustomJSONEncoder
 
 def create_app():
   # Create flask app
