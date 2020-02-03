@@ -1,13 +1,19 @@
 FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y \
-  build-essential \
-  cmake \
-  python3 \
-  python3-pip \
-  zlib1g-dev \
-  liblzma-dev \
-  git
+    build-essential \
+    cmake \
+    python3 \
+    python3-pip \
+    zlib1g-dev \
+    liblzma-dev \
+    git \
+    locales \
+  && rm -rf /var/lib/apt/lists/* \
+  && locale-gen en_US.UTF-8
+
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
 
 # Install python dependencies first so docker can cache them
 COPY requirements.txt /
