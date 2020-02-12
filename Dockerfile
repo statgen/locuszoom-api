@@ -28,7 +28,19 @@ COPY requirements.txt /
 RUN pip3 install -r requirements.txt
 
 # Create a group and user to execute as, then drop root
-RUN adduser --gecos "User for running LocusZoom API as non-root" --shell /bin/bash --disabled-password lzapi
+ARG UID
+ARG GID
+RUN \
+  if [ -n "$GID" ]; then \
+    addgroup --gid $GID lzapi; \
+  else \
+    addgroup lzapi; \
+  fi && \
+  if [ -n "$UID" ]; then \
+    adduser --gecos "User for running LocusZoom API as non-root" --shell /bin/bash --disabled-password --uid $UID --ingroup lzapi lzapi; \
+  else \
+    adduser --gecos "User for running LocusZoom API as non-root" --shell /bin/bash --disabled-password --ingroup lzapi lzapi; \
+  fi
 
 COPY --chown=lzapi:lzapi . /home/locuszoom-api
 RUN mkdir -p /home/locuszoom-api/logs && chown lzapi:lzapi /home/locuszoom-api/logs
