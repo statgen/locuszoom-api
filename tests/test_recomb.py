@@ -70,3 +70,30 @@ def test_no_right_data(client):
   }
   resp = client.get(recomb_result_url,query_string=params)
   assert resp.status_code == 200
+
+def test_null_chrom(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  params = {
+    "filter": "id in 15 and chromosome eq 'null' and position lt 49000000 and position gt 48097610"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  assert resp.status_code == 400
+
+def test_undefined_chrom(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  params = {
+    "filter": "id in 15 and chromosome eq 'undefined' and position lt 49000000 and position gt 48097610"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  assert resp.status_code == 400
+
+def test_null_pos(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  params = {
+    "filter": "id in 15 and chromosome eq '21' and position lt null and position gt null"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  assert resp.status_code == 400

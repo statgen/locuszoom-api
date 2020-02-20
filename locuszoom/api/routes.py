@@ -25,6 +25,17 @@ START_TIME = time.time()
 
 bp = Blueprint("routes", __name__, url_prefix="/v{}".format(current_app.config["API_VERSION"]))
 
+@bp.before_request
+def invalid_request_check():
+  illegal_words = ["null", "undefined", "nan", "none", "\n", "\\n", ";", "="]
+
+  filter_str = request.args.get("filter")
+  if filter_str is not None:
+    filter_str = filter_str.lower()
+    for w in illegal_words:
+      if w in filter_str:
+        raise FlaskException(f"Invalid string {w} found in filter string", 400)
+
 def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
   """
   Standard API response for simple cases of executing a filter against a single

@@ -48,6 +48,22 @@ def test_gene(client):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
+def test_gene_chrom_null(client):
+  params = {
+    "filter": "source in 2 and chrom eq 'null' and start le 57022881 and end ge 56985060"
+  }
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+
+  assert resp.status_code == 400
+
+def test_gene_chrom_undefined(client):
+  params = {
+    "filter": "source in 2 and chrom eq 'undefined' and start le 57022881 and end ge 56985060"
+  }
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+
+  assert resp.status_code == 400
+
 def test_no_genes(client):
   """
   Test region that should contain no genes
