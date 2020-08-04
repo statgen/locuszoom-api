@@ -822,7 +822,7 @@ def omnisearch():
         if term is None:
             return x
         sql_complier = SQLCompiler()
-        filter_str = "gene_name eq '{}'".format(term.upper()) 
+        filter_str = "gene_name eq '{}'".format(term.upper())
         return gene_lookup_base(x, filter_str, build)
 
     def gene_id_lookup(x, build):
@@ -830,9 +830,9 @@ def omnisearch():
         if term is None:
             return x
         sql_complier = SQLCompiler()
-        filter_str = "gene_id like '{}%'".format(term.upper()) 
+        filter_str = "gene_id like '{}%'".format(term.upper())
         return gene_lookup_base(x, filter_str, build)
-  
+
     def rs_lookup(x, build):
         term = x.get("q",None)
         if term is None:
@@ -842,7 +842,7 @@ def omnisearch():
             x["error"] = "SNP positions not available for build"
             return x
         sql_complier = SQLCompiler()
-        filter_str = "id eq {} and rsid eq '{}'".format(build_id, term.lower()) 
+        filter_str = "id eq {} and rsid eq '{}'".format(build_id, term.lower())
         fields = ["chrom", "pos"]
         db_table = "rest.dbsnp_snps"
         sort_fields = ["chrom","pos"]
