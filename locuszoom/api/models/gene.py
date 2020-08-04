@@ -69,7 +69,7 @@ class Transcript(object):
       raise ValueError("Comparing transcripts on separate chromosomes")
 
 class Gene(object):
-  cargs = "gene_id gene_name chrom start end strand".split()
+  cargs = "gene_id gene_name chrom start end strand gene_type".split()
 
   def __init__(self,**kwargs):
     for arg in Gene.cargs:
@@ -146,4 +146,4 @@ def test():
   print("Trying to convert to JSON")
   js = json.dumps(g.to_dict())
   pprint(js)
-  
+

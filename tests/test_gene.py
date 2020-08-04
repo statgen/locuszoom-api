@@ -22,6 +22,7 @@ def test_gene(client):
     assert gene["strand"] in ("+","-")
     assert isinstance(gene["end"],int)
     assert isinstance(gene["start"],int)
+    assert isinstance(gene["gene_type"],string_types)
 
     assert len(gene["exons"]) > 0
 

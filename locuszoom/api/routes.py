@@ -664,7 +664,7 @@ def gene_sources():
 )
 def genes():
   db_table = "rest.gene_data"
-  db_cols = "id feature_type gene_id gene_name chrom start end strand transcript_id exon_id".split()
+  db_cols = "id feature_type gene_id gene_name chrom start end strand transcript_id exon_id annotation".split()
 
   field_to_col = {
     "source": "id"
@@ -676,7 +676,7 @@ def genes():
 
   sql_compiler = SQLCompiler()
 
-  cols = "id gene_id gene_name chrom start end strand".split()
+  cols = "id gene_id gene_name chrom start end strand annotation".split()
   sql_stmt, sql_params = sql_compiler.to_sql(orig_filter,db_table,db_cols,cols,None,field_to_col)
   sql_stmt += " AND feature_type = 'gene'"
 
@@ -685,6 +685,8 @@ def genes():
   genes_arr = []
   for row in cur:
     gene_data = dict(zip(cols,row))
+    annotation = gene_data.pop("annotation")
+    gene_data["gene_type"] = annotation["gene_type"]
     gene = Gene(**gene_data)
     dgenes[gene_data["gene_id"]] = gene
     genes_arr.append(gene)
