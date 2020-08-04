@@ -8,11 +8,13 @@ LABEL org.label-schema.usage="https://portaldev.sph.umich.edu/docs/api/v1/"
 LABEL org.label-schema.vcs-url="https://github.com/statgen/locuszoom-api"
 LABEL org.label-schema.schema-version="1.0"
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     python3 \
     python3-pip \
+    python3-setuptools \
+    python3-dev \
     zlib1g-dev \
     liblzma-dev \
     git \
