@@ -385,7 +385,17 @@ def gwascat_results():
   db_table = "rest.gwascat_data"
   db_cols = "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split()
 
-  return std_response(db_table,db_cols)
+  json = std_response(db_table,db_cols,return_json=False)
+
+  variant_format = request.args.get("variant_format")
+  if variant_format == "colons":
+    for entry in json:
+      entry["variant"] = re.sub("[:_/]",":",entry["variant"])
+
+  return jsonify({
+    "data": json,
+    "lastPage": None
+  })
 
 @bp.route(
   "/statistic/single/",
