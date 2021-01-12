@@ -93,7 +93,7 @@ with gzip.open("table_gwascat_master.gz", "w") as fp:
 print("Dumping GWAS catalog data...")
 cur.execute("""
   CREATE TEMPORARY TABLE gwascat_data_test AS
-  SELECT * FROM rest.gwascat_data WHERE rsid = 'rs7903146'
+  SELECT * FROM rest.gwascat_data WHERE rsid = 'rs7903146' UNION (SELECT * FROM rest.gwascat_data WHERE LENGTH(alt) > 1 AND id = 2 limit 5)
 """)
 
 with gzip.open("table_gwascat_data.gz", "w") as fp:
