@@ -1143,6 +1143,13 @@ pos lt 10 | Select only variants with position less than a value
 variant eq '10:112998590_C/T' | Select a particular variant
 rsid eq 'rs7903146' | Select a variant by rsID
 
+#### PARAMETERS
+
+Param | Description
+----- | -----------
+variant_format | Default variant format is EPACTS style, e.g. 'chr:pos_ref/alt'. Specify variant_format='colons' to get variants of the form 'chr:pos:ref:alt'.
+decompose | Decompose multiallelic variants into separate entries, one per every combination of REF/ALT alleles. This is a boolean parameter and can be turned on with any value, e.g. decompose=1 or decompose=true.
+
 #### SORT
 
 Return sorted results by including the `sort=field` parameter. Probably the most common would be to sort by log p-value, for example `sort=log_pvalue`.
