@@ -55,3 +55,29 @@ def test_annotation_gwascatalog_colons(client):
 
     assert '_' not in entry["variant"]
     assert '/' not in entry["variant"]
+
+def test_annotation_gwascatalog_multiallelic(client):
+  test_id = 2
+  params = {
+    "filter": "id in {}".format(test_id),
+    "sort": "pos",
+    "format": "objects",
+    "decompose": 1,
+    "variant_format": "colons"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+
+  assert results.status_code == 200
+
+  result_data = results.json
+  assert "data" in result_data
+  assert len(result_data["data"]) > 0
+
+  for entry in result_data["data"]:
+    for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
+      assert k in entry
+
+    assert len(entry["alt"]) == 1
+    assert "," not in entry["variant"]
+    assert '_' not in entry["variant"]
+    assert '/' not in entry["variant"]
