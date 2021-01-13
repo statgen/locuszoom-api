@@ -12,6 +12,7 @@ from locuszoom.api.search_tokenizer import SearchTokenizer
 from locuszoom.api.errors import FlaskException
 from six import iteritems
 from subprocess import check_output
+from copy import deepcopy
 import psycopg2
 import redis
 import requests
@@ -386,6 +387,20 @@ def gwascat_results():
   db_cols = "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split()
 
   json = std_response(db_table,db_cols,return_json=False)
+
+  if 'decompose' in request.args:
+    new_json = []
+    for entry in json:
+      if len(entry["alt"]) == 1:
+        new_json.append(entry)
+      else:
+        for alt in entry["alt"].split(","):
+          alt_entry = deepcopy(entry)
+          alt_entry["alt"] = alt
+          alt_entry["variant"] = "{}:{}_{}/{}".format(entry["chrom"], entry["pos"], entry["ref"], alt)
+          new_json.append(alt_entry)
+
+    json = new_json
 
   variant_format = request.args.get("variant_format")
   if variant_format == "colons":
