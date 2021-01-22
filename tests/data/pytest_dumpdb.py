@@ -32,6 +32,16 @@ cur.execute("""
 with gzip.open("table_recomb_results.gz", "w") as fp:
   cur.copy_to(fp, "recomb_test")
 
+# Dump gene master
+print("Dumping gene master...")
+cur.execute("""
+  CREATE TEMPORARY TABLE gene_master_test AS
+  SELECT * FROM rest.gene_master WHERE id in (1, 2)
+""")
+
+with gzip.open("table_gene_master.gz", "w") as fp:
+  cur.copy_to(fp, "gene_master_test")
+
 # Dump genes
 print("Dumping genes...")
 cur.execute("""
