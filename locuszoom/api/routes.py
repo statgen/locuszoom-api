@@ -386,6 +386,26 @@ def gwascat_results():
   db_table = "rest.gwascat_data"
   db_cols = "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split()
 
+  filter_str = request.args.get("filter")
+  if filter_str is None:
+    raise FlaskException("No filter string specified",400)
+
+  fp = FilterParser()
+  filter_stmts = fp.statements(filter_str)
+  if 'id' not in filter_stmts:
+    build = request.args.get("build")
+    if build is None:
+      raise FlaskException("If no GWAS catalog ID is specified via filter parameter, the best recommended catalog will "
+                           "automatically be selected, but you *must* specify the build (genome build) parameter at a minimum")
+
+    dataset_id = fetch_recommended_id(build, 'gwascat_master')
+    if not dataset_id:
+      raise FlaskException(f"No best recommended GWAS catalog is available for build {build}, try querying the metadata endpoint to see all available catalogs")
+
+    filter_str += f' and id eq {dataset_id}'
+  else:
+    dataset_id = filter_stmts["id"].value
+
   json = std_response(db_table,db_cols,return_json=False)
 
   if 'decompose' in request.args:
@@ -409,6 +429,9 @@ def gwascat_results():
 
   return jsonify({
     "data": json,
+    "meta": {
+      "id": dataset_id
+    },
     "lastPage": None
   })
 
