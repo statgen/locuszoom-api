@@ -706,6 +706,26 @@ def gene_sources():
   db_cols = "id source version genome_build taxid organism".split()
   return std_response(db_table,db_cols)
 
+def fetch_distinct_builds(master_table, build_column="genome_build"):
+  """
+  Get a list of all possible genome builds from a master table
+
+  Do not pass unsanitized user input to this function.
+
+  :param master_table: Name of the master table.
+  :param build_column: Column in the master table that contains builds.
+  :return: List of builds
+  """
+
+  sql = f"SELECT DISTINCT({build_column}) FROM {master_table}"
+  cur = g.db.execute(text(sql))
+  res = cur.fetchall()
+  if res is not None and len(res) > 0:
+    builds = [r[0] for r in res]
+    return builds
+  else:
+    return None
+
 def fetch_recommended_id(build, table):
   """
   Return the recommended dataset for a given database table and genome build.
