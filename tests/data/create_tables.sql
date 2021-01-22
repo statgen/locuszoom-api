@@ -151,3 +151,10 @@ CREATE TABLE rest.gwascat_data (
   first_author TEXT,
   study TEXT
 );
+
+CREATE VIEW rest.recommended AS
+(SELECT DISTINCT ON (name, genome_build) id, genome_build, 'gwascat_master' AS db_table FROM rest.gwascat_master WHERE name = 'EBI GWAS Catalog' ORDER BY name, genome_build, date_inserted DESC)
+UNION
+(SELECT DISTINCT ON (source, genome_build, taxid) id, genome_build, 'gene_master' AS db_table FROM rest.gene_master WHERE source = 'gencode' ORDER BY source, genome_build, taxid, version DESC)
+UNION
+(SELECT DISTINCT ON (name, build) id, build AS genome_build, 'recomb' AS db_table FROM rest.recomb WHERE name = 'HapMap phase II' ORDER BY name, build, TO_DATE(version, 'YYYY-MM-DD'));
