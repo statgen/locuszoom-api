@@ -683,6 +683,23 @@ def gene_sources():
   db_cols = "id source version genome_build taxid organism".split()
   return std_response(db_table,db_cols)
 
+def fetch_recommended_id(build, table):
+  """
+  Return the recommended dataset for a given database table and genome build.
+
+  This is typically the dataset corresponding to:
+    1) The "best" source (for example, gencode is our preferred gene source)
+    2) The latest inserted table for that source
+
+  :param build: Genome build, e.g. 'GRCh37'
+  :param table: Database table. Possible options are 'gene_master', 'gwascat_master', 'recomb'
+  :return: ID for the recommended dataset
+  """
+  sql = f"SELECT * FROM rest.recommended WHERE db_table = '{table}' AND genome_build='{build}'"
+  cur = g.db.execute(text(sql))
+  res = cur.fetchone()
+  return res[0] if res is not None else None
+
 @bp.route(
   "/annotation/genes/",
   methods = ["GET"]
