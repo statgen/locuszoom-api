@@ -394,9 +394,14 @@ def gwascat_results():
   filter_stmts = fp.statements(filter_str)
   if 'id' not in filter_stmts:
     build = request.args.get("build")
+
     if build is None:
       raise FlaskException("If no GWAS catalog ID is specified via filter parameter, the best recommended catalog will "
                            "automatically be selected, but you *must* specify the build (genome build) parameter at a minimum")
+
+    allowed_builds = fetch_distinct_builds('rest.gwascat_master')
+    if build not in allowed_builds:
+      raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
 
     dataset_id = fetch_recommended_id(build, 'gwascat_master')
     if not dataset_id:
