@@ -26,6 +26,36 @@ def test_annotation_gwascatalog(client):
   for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
     assert k in result_data["data"]
 
+def test_recommended_gwascat_results(client):
+  # Check results endpoint
+  params = {
+    "filter": "rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos",
+    "build": "GRCh37"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+
+  assert results.status_code == 200
+
+  result_data = results.json
+  assert "data" in result_data
+  assert len(result_data["data"]) > 0
+
+  for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
+    assert k in result_data["data"]
+
+def test_recommended_gwascat_results_missing_build(client):
+  # Check results endpoint
+  params = {
+    "filter": "rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+
+  assert results.status_code == 400
+
 def test_annotation_gwascatalog_colons(client):
   # Check metadata endpoint
   resp = client.get("/v1/annotation/gwascatalog/")
