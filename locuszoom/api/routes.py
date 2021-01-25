@@ -748,6 +748,33 @@ def fetch_recommended_id(build, table):
   res = cur.fetchone()
   return res[0] if res is not None else None
 
+def get_metadata(dbid, table):
+  """
+  Get metadata about a dataset ID (or list of IDs) from a given master table
+  :param dbid: int or list of int dataset IDs
+  :param table: master table, e.g. 'rest.gwascat_master' or 'rest.gene_master'
+  :return: List of dictionaries with information for each ID
+  """
+  if isinstance(dbid, int):
+    where = f"WHERE id = {dbid}"
+  else:
+    try:
+      ids = ",".join(str(int(x)) for x in dbid)
+      where = f"WHERE id in ({ids})"
+    except:
+      raise FlaskException("Invalid ID type when retrieving metadata", 500)
+
+  sql = f"SELECT * FROM {table} {where}"
+  cur = g.db.execute(text(sql))
+  results = cur.fetchall()
+  if results is None or len(results) == 0:
+    return None
+  else:
+    for i, row in enumerate(results):
+      results[i] = dict(results[i])
+
+  return results
+
 @bp.route(
   "/annotation/genes/",
   methods = ["GET"]
