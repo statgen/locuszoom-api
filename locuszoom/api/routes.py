@@ -432,10 +432,12 @@ def gwascat_results():
     for entry in json:
       entry["variant"] = re.sub("[:_/]",":",entry["variant"])
 
+  metadata = get_metadata(dataset_id, 'rest.gwascat_master')
+
   return jsonify({
     "data": json,
     "meta": {
-      "id": dataset_id
+      "datasets": metadata
     },
     "lastPage": None
   })
