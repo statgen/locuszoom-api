@@ -86,6 +86,30 @@ def test_annotation_gwascatalog_colons(client):
     assert '_' not in entry["variant"]
     assert '/' not in entry["variant"]
 
+def test_annotation_gwascatalog_metadata(client):
+  params = {
+    "filter": "id in 2,3 and rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+
+  assert results.status_code == 200
+
+  result_data = results.json
+  assert "data" in result_data
+  assert len(result_data["data"]) > 0
+
+  found_ids = set()
+  for entry in result_data["meta"]["datasets"]:
+    found_ids.add(entry["id"])
+
+  assert 2 in found_ids
+  assert 3 in found_ids
+
+  for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
+    assert k in result_data["data"]
+
 def test_annotation_gwascatalog_multiallelic(client):
   test_id = 2
   params = {
