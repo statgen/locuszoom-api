@@ -278,9 +278,9 @@ def recomb_results():
   matches = fp.parse(filter_str)
   lrm = fp.left_middle_right(matches)
 
-  sql_complier = SQLCompiler()
+  sql_compiler = SQLCompiler()
   def fetch(terms,limit=None):
-    sql, params = sql_complier.to_sql_parsed(terms,db_table,db_cols,limit=limit)
+    sql, params = sql_compiler.to_sql_parsed(terms,db_table,db_cols,limit=limit)
     rows = g.db.execute(text(sql),params).fetchall()
     return rows
 
