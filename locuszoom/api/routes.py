@@ -275,6 +275,29 @@ def recomb_results():
 
   filter_str = request.args.get("filter")
   fp = FilterParser()
+
+  filter_stmts = fp.statements(filter_str)
+  if 'id' not in filter_stmts:
+    build = request.args.get("build")
+
+    if build is None:
+      raise FlaskException("If no ID is specified via filter parameter, the best recommended recombination rate "
+                           "dataset will automatically be selected, but you *must* specify the build (genome build) "
+                           "parameter at a minimum")
+
+    allowed_builds = fetch_distinct_builds('rest.recomb', 'build')
+    if build not in allowed_builds:
+      raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
+
+    dataset_id = fetch_recommended_id(build, 'recomb')
+    if not dataset_id:
+      raise FlaskException(f"No best recommended recombination rate dataset is available for build {build}, "
+                           f"try querying the metadata endpoint to see all available datasets")
+
+    filter_str += f' and id eq {dataset_id}'
+  else:
+    dataset_id = filter_stmts["id"].value
+
   matches = fp.parse(filter_str)
   lrm = fp.left_middle_right(matches)
 
@@ -315,8 +338,14 @@ def recomb_results():
     right_end = interp(lrm["range"]["right"],left[0],right[0])
 
   data = reshape_data([left_end] + middle + [right_end],db_cols)
+
+  metadata = get_metadata(dataset_id, 'rest.recomb')
+
   return jsonify({
     "data": data,
+    "meta": {
+      "datasets": metadata
+    },
     "lastPage": None
   })
 
