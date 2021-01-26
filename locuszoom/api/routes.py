@@ -793,6 +793,29 @@ def genes():
   if orig_filter is None:
     raise FlaskException("Filter is a required parameter for this endpoint")
 
+  fp = FilterParser()
+  orig_stmts = fp.statements(orig_filter)
+
+  if 'source' not in orig_stmts:
+    build = request.args.get("build")
+
+    if build is None:
+      raise FlaskException("If no gene source ID is specified via filter parameter, the best recommended gene information source will "
+                           "automatically be selected, but you *must* specify the build (genome build) query parameter at a minimum")
+
+    allowed_builds = fetch_distinct_builds('rest.gene_master')
+    if build not in allowed_builds:
+      raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
+
+    dataset_id = fetch_recommended_id(build, 'gene_master')
+    if not dataset_id:
+      raise FlaskException(f"No best recommended gene source is available for build {build}, try querying the metadata endpoint to see all available gene sources")
+
+    orig_filter += f' and source eq {dataset_id}'
+    sources = [dataset_id]
+  else:
+    sources = orig_stmts["source"].value
+
   sql_compiler = SQLCompiler()
 
   cols = "id gene_id gene_name chrom start end strand annotation".split()
@@ -818,9 +841,6 @@ def genes():
     trans_keys = "transcript_id chrom start end strand".split()
     exon_keys = "exon_id chrom start end strand".split()
     dtranscripts = {}
-
-    fp = FilterParser()
-    sources = fp.statements(orig_filter)["source"].value
 
     sql_stmt = (
       "SELECT {} from {} "
@@ -866,8 +886,13 @@ def genes():
 
   json_genes = [gene.to_dict() for gene in genes_arr]
 
+  metadata = get_metadata(sources, 'rest.gene_master')
+
   outer = {
     "data": json_genes,
+    "meta": {
+      "datasets": metadata
+    },
     "lastPage": None
   }
 
