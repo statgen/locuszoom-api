@@ -508,7 +508,15 @@ position | Genomic position (bp)
 pos_cm | Genetic position (cM)
 recomb_rate | Recombination rate
 
+If no ID is specified in the filter string, the best recommended recombination rate source will be chosen. This is currently HapMap Phase 2. The `build` parameter must also be specified.  
+
 #### FILTERS
+
+#### PARAMETERS
+
+Param | Description
+----- | -----------
+build | Explicitly set the genome build for this endpoint. This affects how the recommended recombination rate source is selected when no ID is present in the filter string.
 
 #### SORT
 
@@ -953,6 +961,8 @@ end | Gene end position.
 strand | Gene strand
 transcripts | A nested object defining available transcripts, and each exon within each transcript
 
+If no source is specified in the filter string, the best recommended gene source will be chosen. This is currently the latest version of GENCODE. The `build` parameter must also be specified.
+
 #### FILTERS
 
 Filter | Description
@@ -963,6 +973,12 @@ gene_id in 'ENSG00000223972.5', 'ENSG00000227232.5' | Selects gene annotation by
 chrom eq 'chr20' | Selects gene annotation that lie within a chromosome.
 start ge 20000000 | Selects gene annotation with start positions greater than a certain value.
 end le 20100000 | Selects gene annotation with end positions less than a certain value.
+
+#### PARAMETERS
+
+Param | Description
+----- | -----------
+build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string.
 
 #### SORT
 
@@ -1130,6 +1146,8 @@ trait | Name of the trait/phenotype/disease
 trait_group | Grouping of traits as defined by the catalog
 variant | Variant in chr:pos_ref/alt format
 
+If no ID is specified in the filter string, the best recommended GWAS catalog will be chosen. This is currently the latest version of the EBI GWAS catalog. The `build` parameter must also be specified.
+
 #### FILTERS
 
 Filter | Description
@@ -1149,6 +1167,7 @@ Param | Description
 ----- | -----------
 variant_format | Default variant format is EPACTS style, e.g. 'chr:pos_ref/alt'. Specify variant_format='colons' to get variants of the form 'chr:pos:ref:alt'.
 decompose | Decompose multiallelic variants into separate entries, one per every combination of REF/ALT alleles. This is a boolean parameter and can be turned on with any value, e.g. decompose=1 or decompose=true.
+build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string.
 
 #### SORT
 
