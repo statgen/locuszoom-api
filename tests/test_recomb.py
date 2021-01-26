@@ -25,6 +25,24 @@ def test_between_points(client):
   assert len(js["data"]["recomb_rate"]) == 2
   assert js["data"]["recomb_rate"][0] == js["data"]["recomb_rate"][1]
 
+def test_recommended(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  # Testing interpolation when no data in between the two endpoints
+  # Both endpoints should end up with the same recombination rate
+  params = {
+    "filter": "chromosome eq '21' and position lt 10890000 and position gt 10870000",
+    "build": "GRCh37"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  js = resp.json
+
+  assert resp.status_code == 200
+  assert len(js["data"]["recomb_rate"]) == 2
+  assert js["data"]["recomb_rate"][0] == js["data"]["recomb_rate"][1]
+  assert len(js["meta"]) > 0
+  assert len(js["meta"]["datasets"]) > 0
+
 def test_overlap_1(client):
   recomb_result_url = "/v1/annotation/recomb/results/"
 
