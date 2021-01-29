@@ -16,14 +16,16 @@ def get_settings():
   p.add_argument("--port")
   p.add_argument("--host")
   p.add_argument("--user")
+  p.add_argument("--password")
 
   args = p.parse_args()
 
   args.host = args.host if args.host is not None else os.environ.get("POSTGRES_HOST")
   args.port = args.port if args.port is not None else os.environ.get("POSTGRES_PORT")
   args.user = args.user if args.user is not None else os.environ.get("POSTGRES_USER")
+  args.password = args.password if args.password is not None else os.environ.get("POSTGRES_PASSWORD")
   args.connect_db = args.connect_db if args.connect_db is not None else os.environ.get("POSTGRES_CONNECT_DB")
-  args.database = args.database if args.database is not None else os.environ.get("POSTGRES_TEST_DB")
+  args.database = args.database if args.database is not None else os.environ.get("POSTGRES_DB")
 
   return args
 
@@ -32,7 +34,7 @@ if __name__ == "__main__":
 
   # Connect to postgres and create the database.
   if args.connect_db is not None:
-    init_con = psycopg2.connect(database=args.connect_db, host=args.host, port=args.port, user=args.user)
+    init_con = psycopg2.connect(database=args.connect_db, host=args.host, port=args.port, user=args.user, password=args.password)
     init_con.autocommit = True
     init_cur = init_con.cursor()
 
@@ -42,7 +44,7 @@ if __name__ == "__main__":
 
   # Re-connect to the database.
   print(f"Connecting to PostgresDB - database {args.database} • host {args.host} • port {args.port} • user {args.user}")
-  con = psycopg2.connect(database=args.database, host=args.host, port=args.port, user=args.user)
+  con = psycopg2.connect(database=args.database, host=args.host, port=args.port, user=args.user, password=args.password)
   con.autocommit = True
   cur = con.cursor()
 
