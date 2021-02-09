@@ -45,6 +45,26 @@ def test_recommended_gwascat_results(client):
   for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
     assert k in result_data["data"]
 
+def test_build_and_id_validate(client):
+  # Check results endpoint
+  params = {
+    "filter": "id in 1 and rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos",
+    "build": "GRCh38"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+  assert results.status_code == 200
+
+  bad_params = {
+    "filter": "id in 1 and rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos",
+    "build": "GRCh37"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=bad_params)
+  assert results.status_code == 400
+
 def test_recommended_gwascat_results_missing_build(client):
   # Check results endpoint
   params = {
