@@ -277,9 +277,8 @@ def recomb_results():
   fp = FilterParser()
 
   filter_stmts = fp.statements(filter_str)
+  build = request.args.get("build")
   if 'id' not in filter_stmts:
-    build = request.args.get("build")
-
     if build is None:
       raise FlaskException("If no ID is specified via filter parameter, the best recommended recombination rate "
                            "dataset will automatically be selected, but you *must* specify the build (genome build) "
@@ -297,6 +296,11 @@ def recomb_results():
     filter_str += f' and id eq {dataset_id}'
   else:
     dataset_id = filter_stmts["id"].value
+    if build is not None:
+      for dbid in dataset_id:
+        allowed_build = fetch_build_for_id(dbid, "rest.recomb", "build")
+        if allowed_build != build:
+          raise FlaskException(f"Invalid build {build} given for recombination rate dataset ID {dbid}")
 
   matches = fp.parse(filter_str)
   lrm = fp.left_middle_right(matches)
