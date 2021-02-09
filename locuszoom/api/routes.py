@@ -762,6 +762,15 @@ def fetch_distinct_builds(master_table, build_column="genome_build"):
   else:
     return None
 
+def fetch_build_for_id(dbid, master_table, build_column="genome_build"):
+  sql = f"SELECT {build_column} FROM {master_table} WHERE id={dbid}"
+  cur = g.db.execute(text(sql))
+  res = cur.fetchone()
+  if res is not None and len(res) > 0:
+    return res[0]
+  else:
+    return None
+
 def fetch_recommended_id(build, table):
   """
   Return the recommended dataset for a given database table and genome build.
@@ -824,10 +833,8 @@ def genes():
 
   fp = FilterParser()
   orig_stmts = fp.statements(orig_filter)
-
+  build = request.args.get("build")
   if 'source' not in orig_stmts:
-    build = request.args.get("build")
-
     if build is None:
       raise FlaskException("If no gene source ID is specified via filter parameter, the best recommended gene information source will "
                            "automatically be selected, but you *must* specify the build (genome build) query parameter at a minimum")
@@ -844,6 +851,11 @@ def genes():
     sources = [dataset_id]
   else:
     sources = orig_stmts["source"].value
+    if build is not None:
+      for v in sources:
+        allowed_build = fetch_build_for_id(v, "rest.gene_master")
+        if allowed_build != build:
+          raise FlaskException(f"Invalid build {build} given for source ID {v}")
 
   sql_compiler = SQLCompiler()
 

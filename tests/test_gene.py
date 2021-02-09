@@ -97,6 +97,25 @@ def test_gene_recommended_source(client):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
+def test_build_and_source_validate(client):
+  params = {
+    "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060",
+    "build": "GRCh37"
+  }
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+
+  assert resp.status_code == 200
+  assert len(resp.json["data"]) > 0
+
+  # Build 38 is not valid for source 2
+  bad_params = {
+    "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060",
+    "build": "GRCh38"
+  }
+  resp = client.get("/v1/annotation/genes/", query_string=bad_params)
+
+  assert resp.status_code == 400
+
 def test_gene_chrom_null(client):
   params = {
     "filter": "source in 2 and chrom eq 'null' and start le 57022881 and end ge 56985060"
