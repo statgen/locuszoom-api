@@ -43,6 +43,23 @@ def test_recommended(client):
   assert len(js["meta"]) > 0
   assert len(js["meta"]["datasets"]) > 0
 
+def test_build_and_id_validate(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  params = {
+    "filter": "id in 15 and chromosome eq '21' and position lt 10890000 and position gt 10870000",
+    "build": "GRCh37"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  assert resp.status_code == 200
+
+  bad_params = {
+    "filter": "id in 15 and chromosome eq '21' and position lt 10890000 and position gt 10870000",
+    "build": "GRCh38"
+  }
+  resp = client.get(recomb_result_url,query_string=bad_params)
+  assert resp.status_code == 400
+
 def test_overlap_1(client):
   recomb_result_url = "/v1/annotation/recomb/results/"
 
