@@ -343,7 +343,7 @@ def recomb_results():
 
   data = reshape_data([left_end] + middle + [right_end],db_cols)
 
-  metadata = get_metadata(dataset_id, 'rest.recomb')
+  metadata = get_metadata(dataset_id, 'rest.recomb', {"build": "genome_build"})
 
   return jsonify({
     "data": data,
@@ -469,7 +469,7 @@ def gwascat_results():
     for entry in json:
       entry["variant"] = re.sub("[:_/]",":",entry["variant"])
 
-  metadata = get_metadata(dataset_id, 'rest.gwascat_master')
+  metadata = get_metadata(dataset_id, 'rest.gwascat_master', {"catalog_version": "version"})
 
   return jsonify({
     "data": json,
