@@ -43,6 +43,23 @@ def test_recommended(client):
   assert len(js["meta"]) > 0
   assert len(js["meta"]["datasets"]) > 0
 
+def test_metadata(client):
+  recomb_result_url = "/v1/annotation/recomb/results/"
+
+  # Testing interpolation when no data in between the two endpoints
+  # Both endpoints should end up with the same recombination rate
+  params = {
+    "filter": "id in 15 and chromosome eq '21' and position lt 10890000 and position gt 10870000"
+  }
+  resp = client.get(recomb_result_url,query_string=params)
+  assert resp.status_code == 200
+
+  meta = resp.json["meta"]
+  for d in meta["datasets"]:
+    assert "id" in d
+    assert "genome_build" in d
+    assert "name" in d
+
 def test_build_and_id_validate(client):
   recomb_result_url = "/v1/annotation/recomb/results/"
 
