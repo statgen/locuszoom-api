@@ -796,13 +796,17 @@ def fetch_recommended_id(build, table):
   res = cur.fetchone()
   return res[0] if res is not None else None
 
-def get_metadata(dbid, table):
+def get_metadata(dbid, table, rename=None):
   """
   Get metadata about a dataset ID (or list of IDs) from a given master table
   :param dbid: int or list of int dataset IDs
   :param table: master table, e.g. 'rest.gwascat_master' or 'rest.gene_master'
+  :param rename: dictionary of old field -> new field name to return in metadata
   :return: List of dictionaries with information for each ID
   """
+  if rename is None:
+    rename = {}
+
   if isinstance(dbid, int):
     where = f"WHERE id = {dbid}"
   else:
@@ -818,10 +822,16 @@ def get_metadata(dbid, table):
   if results is None or len(results) == 0:
     return None
   else:
+    final = list()
     for i, row in enumerate(results):
-      results[i] = dict(results[i])
+      final.append(dict())
+      for k, v in results[i].items():
+        if k in rename:
+          k = rename[k]
 
-  return results
+        final[i][k] = v
+
+  return final
 
 @bp.route(
   "/annotation/genes/",
