@@ -49,6 +49,22 @@ def test_gene(client):
       assert tx["strand"] in ("+","-")
       assert len(tx["exons"]) > 0
 
+def test_metadata(client):
+  params = {
+    "filter": "source in 2 and chrom eq '16' and start le 57022881 and end ge 56985060"
+  }
+  resp = client.get("/v1/annotation/genes/",query_string=params)
+  assert resp.status_code == 200
+
+  meta = resp.json["meta"]
+  for d in meta["datasets"]:
+    assert "genome_build" in d
+    assert "version" in d
+    assert "id" in d
+    assert "organism" in d
+    assert "taxid" in d
+    assert "source" in d
+
 def test_gene_recommended_source(client):
   params = {
     "filter": "chrom eq '16' and start le 57022881 and end ge 56985060",

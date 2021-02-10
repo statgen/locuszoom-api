@@ -26,6 +26,20 @@ def test_annotation_gwascatalog(client):
   for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
     assert k in result_data["data"]
 
+def test_metadata(client):
+  params = {
+    "filter": "id in 2 and rsid eq 'rs7903146'",
+    "limit": 1,
+    "sort": "pos"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+  meta = results.json["meta"]
+  for d in meta["datasets"]:
+    assert "genome_build" in d
+    assert "version" in d
+    assert "name" in d
+    assert "id" in d
+
 def test_recommended_gwascat_results(client):
   # Check results endpoint
   params = {
