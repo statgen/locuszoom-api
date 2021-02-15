@@ -14,6 +14,7 @@ from six import iteritems
 from subprocess import check_output
 from copy import deepcopy
 import psycopg2
+import psycopg2.sql
 import redis
 import requests
 import traceback
@@ -284,7 +285,7 @@ def recomb_results():
                            "dataset will automatically be selected, but you *must* specify the build (genome build) "
                            "parameter at a minimum")
 
-    allowed_builds = fetch_distinct_builds('rest.recomb', 'build')
+    allowed_builds = fetch_distinct_builds('recomb', 'build')
     if build not in allowed_builds:
       raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
 
@@ -298,7 +299,7 @@ def recomb_results():
     dataset_id = filter_stmts["id"].value
     if build is not None:
       for dbid in dataset_id:
-        allowed_build = fetch_build_for_id(dbid, "rest.recomb", "build")
+        allowed_build = fetch_build_for_id(dbid, "recomb", "build", "rest")
         if allowed_build != build:
           raise FlaskException(f"Invalid build {build} given for recombination rate dataset ID {dbid}")
 
@@ -431,7 +432,7 @@ def gwascat_results():
       raise FlaskException("If no GWAS catalog ID is specified via filter parameter, the best recommended catalog will "
                            "automatically be selected, but you *must* specify the build (genome build) parameter at a minimum")
 
-    allowed_builds = fetch_distinct_builds('rest.gwascat_master')
+    allowed_builds = fetch_distinct_builds('gwascat_master')
     if build not in allowed_builds:
       raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
 
@@ -444,7 +445,7 @@ def gwascat_results():
     dataset_id = filter_stmts["id"].value
     if build is not None:
       for dbid in dataset_id:
-        allowed_build = fetch_build_for_id(dbid, "rest.gwascat_master")
+        allowed_build = fetch_build_for_id(dbid, "gwascat_master", "genome_build", "rest")
         if allowed_build != build:
           raise FlaskException(f"Invalid build {build} given for GWAS catalog ID {dbid}")
 
@@ -750,7 +751,7 @@ def gene_sources():
   db_cols = "id source version genome_build taxid organism".split()
   return std_response(db_table,db_cols)
 
-def fetch_distinct_builds(master_table, build_column="genome_build"):
+def fetch_distinct_builds(master_table, build_column="genome_build", schema="rest"):
   """
   Get a list of all possible genome builds from a master table
 
@@ -761,8 +762,15 @@ def fetch_distinct_builds(master_table, build_column="genome_build"):
   :return: List of builds
   """
 
-  sql = f"SELECT DISTINCT({build_column}) FROM {master_table}"
-  cur = g.db.execute(text(sql))
+  query = psycopg2.sql.SQL("SELECT DISTINCT({build_column}) FROM {schema}.{master_table}").format(
+    build_column = psycopg2.sql.Identifier(build_column),
+    schema = psycopg2.sql.Identifier(schema),
+    master_table = psycopg2.sql.Identifier(master_table)
+  )
+
+  con = g.db.engine.raw_connection()
+  cur = con.cursor()
+  cur.execute(query)
   res = cur.fetchall()
   if res is not None and len(res) > 0:
     builds = [r[0] for r in res]
@@ -770,9 +778,16 @@ def fetch_distinct_builds(master_table, build_column="genome_build"):
   else:
     return None
 
-def fetch_build_for_id(dbid, master_table, build_column="genome_build"):
-  sql = f"SELECT {build_column} FROM {master_table} WHERE id={dbid}"
-  cur = g.db.execute(text(sql))
+def fetch_build_for_id(dbid, master_table, build_column="genome_build", schema="rest"):
+  query = psycopg2.sql.SQL("SELECT {build_col} FROM {schema}.{master_table} WHERE id = %s").format(
+    build_col = psycopg2.sql.Identifier(build_column),
+    schema = psycopg2.sql.Identifier(schema),
+    master_table = psycopg2.sql.Identifier(master_table)
+  )
+
+  con = g.db.engine.raw_connection()
+  cur = con.cursor()
+  cur.execute(query, (dbid,))
   res = cur.fetchone()
   if res is not None and len(res) > 0:
     return res[0]
@@ -791,8 +806,10 @@ def fetch_recommended_id(build, table):
   :param table: Database table. Possible options are 'gene_master', 'gwascat_master', 'recomb'
   :return: ID for the recommended dataset
   """
-  sql = f"SELECT * FROM rest.recommended WHERE db_table = '{table}' AND genome_build='{build}'"
-  cur = g.db.execute(text(sql))
+  query = psycopg2.sql.SQL("SELECT * FROM rest.recommended WHERE db_table = %s AND genome_build = %s")
+  con = g.db.engine.raw_connection()
+  cur = con.cursor()
+  cur.execute(query, (table, build,))
   res = cur.fetchone()
   return res[0] if res is not None else None
 
@@ -857,7 +874,7 @@ def genes():
       raise FlaskException("If no gene source ID is specified via filter parameter, the best recommended gene information source will "
                            "automatically be selected, but you *must* specify the build (genome build) query parameter at a minimum")
 
-    allowed_builds = fetch_distinct_builds('rest.gene_master')
+    allowed_builds = fetch_distinct_builds('gene_master')
     if build not in allowed_builds:
       raise FlaskException(f"Invalid build {build}, must be one of: {allowed_builds}")
 
@@ -871,7 +888,7 @@ def genes():
     sources = orig_stmts["source"].value
     if build is not None:
       for v in sources:
-        allowed_build = fetch_build_for_id(v, "rest.gene_master")
+        allowed_build = fetch_build_for_id(v, "gene_master", "genome_build", "rest")
         if allowed_build != build:
           raise FlaskException(f"Invalid build {build} given for source ID {v}")
 
