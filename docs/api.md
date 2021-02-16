@@ -516,7 +516,7 @@ If no ID is specified in the filter string, the best recommended recombination r
 
 Param | Description
 ----- | -----------
-build | Explicitly set the genome build for this endpoint. This affects how the recommended recombination rate source is selected when no ID is present in the filter string.
+build | Explicitly set the genome build for this endpoint. This affects how the recommended recombination rate source is selected when no ID is present in the filter string. Acceptable builds are 'GRCh37', 'GRCh38'.
 
 #### SORT
 
@@ -978,7 +978,7 @@ end le 20100000 | Selects gene annotation with end positions less than a certain
 
 Param | Description
 ----- | -----------
-build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string.
+build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string. Acceptable builds are 'GRCh37', 'GRCh38'. 
 
 #### SORT
 
@@ -1167,7 +1167,7 @@ Param | Description
 ----- | -----------
 variant_format | Default variant format is EPACTS style, e.g. 'chr:pos_ref/alt'. Specify variant_format='colons' to get variants of the form 'chr:pos:ref:alt'.
 decompose | Decompose multiallelic variants into separate entries, one per every combination of REF/ALT alleles. This is a boolean parameter and can be turned on with any value, e.g. decompose=1 or decompose=true.
-build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string.
+build | Explicitly set the genome build for this endpoint. This affects how the recommended gene source is selected when no ID is present in the filter string. Acceptable builds are 'GRCh37', 'GRCh38'.
 
 #### SORT
 
