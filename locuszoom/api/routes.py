@@ -769,8 +769,7 @@ def fetch_distinct_builds(master_table, build_column="genome_build", schema="res
     master_table = psycopg2.sql.Identifier(master_table)
   )
 
-  con = g.db.engine.raw_connection()
-  cur = con.cursor()
+  cur = g.db.connection.cursor()
   cur.execute(query)
   res = cur.fetchall()
   if res is not None and len(res) > 0:
@@ -786,8 +785,7 @@ def fetch_build_for_id(dbid, master_table, build_column="genome_build", schema="
     master_table = psycopg2.sql.Identifier(master_table)
   )
 
-  con = g.db.engine.raw_connection()
-  cur = con.cursor()
+  cur = g.db.connection.cursor()
   cur.execute(query, (dbid,))
   res = cur.fetchone()
   if res is not None and len(res) > 0:
@@ -838,8 +836,7 @@ def get_metadata(dbid, table, schema="rest", rename=None):
     psycopg2.sql.Identifier(schema),
     psycopg2.sql.Identifier(table)
   )
-  con = g.db.engine.raw_connection()
-  cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
+  cur = g.db.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
   cur.execute(query, (ids,))
   results = cur.fetchall()
   if results is None or len(results) == 0:
