@@ -15,6 +15,7 @@ from subprocess import check_output
 from copy import deepcopy
 import psycopg2
 import psycopg2.sql
+import psycopg2.extras
 import redis
 import requests
 import traceback
@@ -344,7 +345,7 @@ def recomb_results():
 
   data = reshape_data([left_end] + middle + [right_end],db_cols)
 
-  metadata = get_metadata(dataset_id, 'rest.recomb', {"build": "genome_build"})
+  metadata = get_metadata(dataset_id, "recomb", "rest", {"build": "genome_build"})
 
   return jsonify({
     "data": data,
@@ -470,7 +471,7 @@ def gwascat_results():
     for entry in json:
       entry["variant"] = re.sub("[:_/]",":",entry["variant"])
 
-  metadata = get_metadata(dataset_id, 'rest.gwascat_master', {"catalog_version": "version"})
+  metadata = get_metadata(dataset_id, "gwascat_master", "rest", {"catalog_version": "version"})
 
   return jsonify({
     "data": json,
@@ -813,11 +814,12 @@ def fetch_recommended_id(build, table):
   res = cur.fetchone()
   return res[0] if res is not None else None
 
-def get_metadata(dbid, table, rename=None):
+def get_metadata(dbid, table, schema="rest", rename=None):
   """
   Get metadata about a dataset ID (or list of IDs) from a given master table
   :param dbid: int or list of int dataset IDs
   :param table: master table, e.g. 'rest.gwascat_master' or 'rest.gene_master'
+  :param schema: schema that master table belongs to
   :param rename: dictionary of old field -> new field name to return in metadata
   :return: List of dictionaries with information for each ID
   """
@@ -825,16 +827,20 @@ def get_metadata(dbid, table, rename=None):
     rename = {}
 
   if isinstance(dbid, int):
-    where = f"WHERE id = {dbid}"
+    ids = (dbid,)
   else:
     try:
-      ids = ",".join(str(int(x)) for x in dbid)
-      where = f"WHERE id in ({ids})"
+      ids = tuple(int(x) for x in dbid)
     except:
       raise FlaskException("Invalid ID type when retrieving metadata", 500)
 
-  sql = f"SELECT * FROM {table} {where}"
-  cur = g.db.execute(text(sql))
+  query = psycopg2.sql.SQL("SELECT * FROM {}.{} WHERE id in %s").format(
+    psycopg2.sql.Identifier(schema),
+    psycopg2.sql.Identifier(table)
+  )
+  con = g.db.engine.raw_connection()
+  cur = con.cursor(cursor_factory=psycopg2.extras.DictCursor)
+  cur.execute(query, (ids,))
   results = cur.fetchall()
   if results is None or len(results) == 0:
     return None
@@ -962,7 +968,7 @@ def genes():
 
   json_genes = [gene.to_dict() for gene in genes_arr]
 
-  metadata = get_metadata(sources, 'rest.gene_master')
+  metadata = get_metadata(sources, "gene_master", "rest")
 
   outer = {
     "data": json_genes,
