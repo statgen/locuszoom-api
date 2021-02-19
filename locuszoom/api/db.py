@@ -18,21 +18,12 @@ from flask import current_app, g
   #else:
     #return float(value)
 
+# Store SQLAlchemy engine at global scope
+engine = None
+
 def before_request():
   db = getattr(g,"db",None)
   if db is None:
-    # Create SQLalchemy engine
-    engine = create_engine(
-      URL(**current_app.config["DATABASE"]),
-      connect_args = dict(
-        application_name = current_app.config["DB_APP_NAME"]
-      ),
-      pool_size = 5,
-      max_overflow = 0,
-      isolation_level = "AUTOCOMMIT"
-      # poolclass = NullPool
-    )
-
     # Create database connection
     db = engine.connect()
 
@@ -52,6 +43,19 @@ def close_db(*args):
     db.close()
 
 def init_app(app):
+  global engine
+
+  engine = create_engine(
+    URL(**app.config["DATABASE"]),
+    connect_args=dict(
+      application_name=app.config["DB_APP_NAME"]
+    ),
+    pool_size=5,
+    max_overflow=0,
+    isolation_level="AUTOCOMMIT"
+    # poolclass = NullPool
+  )
+
   app.before_request(before_request)
   app.teardown_appcontext(close_db)
 
