@@ -1,8 +1,3 @@
-# This patches psycopg2 to support gevent asyncio.
-# Note that gunicorn's gevent worker already does the gevent monkey patch, so it isn't needed here.
-from psycogreen.gevent import patch_psycopg
-patch_psycopg()
-
 import os, datetime, logging
 from flask import Flask, g
 from flask_cors import CORS
