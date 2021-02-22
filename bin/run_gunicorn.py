@@ -2,6 +2,7 @@
 import os
 
 WORKER_COUNT = 4
+THREAD_COUNT = 2
 
 def import_settings(f):
   with open(f) as fp:
@@ -59,12 +60,12 @@ if __name__ == "__main__":
   bash(
     """
 
-    gunicorn -k gevent -w {workers} -b {host}:{port} 'locuszoom.api:create_app()' \
+    gunicorn -k gthread --threads {threads} -w {workers} -b {host}:{port} 'locuszoom.api:create_app()' \
       --access-logfile logs/gunicorn.${{LZAPI_MODE}}.access.log \
       --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" [reqtime: %(L)ss] -- %(U)s -- %(q)s' \
       --error-logfile logs/gunicorn.${{LZAPI_MODE}}.error.log \
       --log-level info
 
-    """.format(host=FLASK_HOST,port=FLASK_PORT,workers=WORKER_COUNT)
+    """.format(host=FLASK_HOST,port=FLASK_PORT,workers=WORKER_COUNT,threads=THREAD_COUNT)
   )
 
