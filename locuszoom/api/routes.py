@@ -453,23 +453,61 @@ def gwascat_results():
   json = std_response(db_table,db_cols,return_json=False)
 
   if 'decompose' in request.args:
-    new_json = []
-    for entry in json:
-      if len(entry["alt"]) == 1:
-        new_json.append(entry)
-      else:
-        for alt in entry["alt"].split(","):
-          alt_entry = deepcopy(entry)
-          alt_entry["alt"] = alt
-          alt_entry["variant"] = "{}:{}_{}/{}".format(entry["chrom"], entry["pos"], entry["ref"], alt)
-          new_json.append(alt_entry)
+    if isinstance(json, list):
+      # This is "array of objects" format.
+      new_json = []
+      for entry in json:
+        if len(entry["alt"]) == 1:
+          new_json.append(entry)
+        else:
+          for alt in entry["alt"].split(","):
+            alt_entry = deepcopy(entry)
+            alt_entry["alt"] = alt
+            alt_entry["variant"] = "{}:{}_{}/{}".format(entry["chrom"], entry["pos"], entry["ref"], alt)
+            new_json.append(alt_entry)
+    elif isinstance(json, dict):
+      # This is "dictionary of arrays" format.
+      new_json = OrderedDict()
+      for k in json:
+        new_json[k] = []
+
+      other_keys = json.keys() - ["variant", "alt"]
+      alt_array = json["alt"]
+      for i in range(len(alt_array)):
+        if len(alt_array[i]) == 1:
+          for k in json:
+            new_json[k].append(json[k][i])
+        else:
+          for alt in alt_array[i].split(","):
+            new_variant = "{}:{}_{}/{}".format(
+              json["chrom"][i],
+              json["pos"][i],
+              json["ref"][i],
+              alt
+            )
+
+            new_json["variant"].append(new_variant)
+            new_json["alt"].append(alt)
+            for k in other_keys:
+              new_json[k].append(json[k][i])
+
+    else:
+      raise FlaskException("Server error, resulting json object was not dict or list", 500)
 
     json = new_json
 
   variant_format = request.args.get("variant_format")
   if variant_format == "colons":
-    for entry in json:
-      entry["variant"] = re.sub("[:_/]",":",entry["variant"])
+    if isinstance(json, list):
+      for entry in json:
+        entry["variant"] = re.sub("[:_/]",":",entry["variant"])
+
+    elif isinstance(json, dict):
+      for i, v in enumerate(json["variant"]):
+        json["variant"][i] = re.sub("[:_/]",":",v)
+
+    else:
+      raise FlaskException("Server error, resulting json object was not dict or list", 500)
 
   metadata = get_metadata(dataset_id, "gwascat_master", "rest", {"catalog_version": "version"})
 

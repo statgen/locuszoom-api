@@ -59,6 +59,36 @@ def test_recommended_gwascat_results(client):
   for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
     assert k in result_data["data"]
 
+def test_annotation_gwascatalog_colons_decompose_noobj(client):
+  test_id = 2
+  params = {
+    "filter": "id in {}".format(test_id),
+    "sort": "pos",
+    "decompose": 1,
+    "variant_format": "colons"
+  }
+  results = client.get("/v1/annotation/gwascatalog/results/",query_string=params)
+
+  assert results.status_code == 200
+
+  result_data = results.json
+  assert "data" in result_data
+
+  data = result_data["data"]
+  assert len(data) > 0
+
+  for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
+    assert k in data
+
+  for i in range(len(data["variant"])):
+    variant = data["variant"][i]
+    alt = data["alt"][i]
+
+    assert len(alt) == 1
+    assert "," not in variant
+    assert '_' not in variant
+    assert '/' not in variant
+
 def test_build_and_id_validate(client):
   # Check results endpoint
   params = {
