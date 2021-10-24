@@ -30,3 +30,6 @@ CACHE_CONFIG = dict(
 # Maximum distance from a reference variant that we will allow
 # for LD calculations
 LD_MAX_FLANK = int(3E6)
+
+# Maximum number of records that can be retrieved at once.
+MAX_RECORDS = 100000

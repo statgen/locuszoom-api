@@ -178,6 +178,7 @@ def get_float_columns(proxy):
 
 def rows_to_arrays(cur,fields,cols_to_field):
   data = OrderedDict()
+  max_rec = current_app.config.get("MAX_RECORDS", 100000)
 
   # Figure out which columns contain floating point data
   float_cols = get_float_columns(cur)
@@ -203,6 +204,9 @@ def rows_to_arrays(cur,fields,cols_to_field):
 
         data.setdefault(field,[]).append(v)
 
+    if i > max_rec:
+      raise FlaskException(f"API request attempted to retrieve more than {max_rec} records; please reduce the range of your query");
+
   if not data:
     # No data was found so fill with empty arrays
     db_cols = list(cur.keys())
@@ -213,11 +217,12 @@ def rows_to_arrays(cur,fields,cols_to_field):
 
 def rows_to_objects(cur,fields,cols_to_field):
   data = []
+  max_rec = current_app.config.get("MAX_RECORDS", 100000)
 
   # Figure out which columns contain floating point data
   float_cols = get_float_columns(cur)
 
-  for row in cur:
+  for i, row in enumerate(cur):
     rowdict = dict(row)
     finaldict = dict()
 
@@ -233,6 +238,9 @@ def rows_to_objects(cur,fields,cols_to_field):
         finaldict[col] = stringify_float(finaldict[col])
 
     data.append(finaldict)
+
+    if i > max_rec:
+      raise FlaskException(f"API request attempted to retrieve more than {max_rec} records; please reduce the range of your query");
 
   return data
 
