@@ -56,3 +56,25 @@ def test_empty_region(client):
     assert k in data
     assert isinstance(data[k],list)
     assert len(data[k]) == 0
+
+def test_record_hard_limit(app, client):
+  resp = client.get("/v1/statistic/single/")
+  assert resp.status_code == 200
+
+  data = resp.json
+  assert len(data["data"]["id"]) > 1
+
+  test_id = data["data"]["id"][0]
+  params = {
+    "filter": "analysis in {} and chromosome in '16' and position ge 0 and position le 200000000".format(test_id),
+    "sort": "position",
+    "format": "objects"
+  }
+
+  # This should cause the request to trigger an error since there are more than 1 records being returned.
+  app.config["MAX_RECORDS"] = 1
+
+  results = client.get("/v1/statistic/single/results/",query_string=params)
+
+  assert results.status_code == 400
+  assert "please reduce the range of your query" in results.json["message"]
