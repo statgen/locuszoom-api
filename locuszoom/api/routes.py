@@ -123,6 +123,8 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
     style = "table"
   elif return_format == "objects" or format_str == "objects":
     style = "objects"
+  else:
+    raise FlaskException(f"Invalid format requested, should be 'table' or 'objects'")
 
   data = reshape_data(cur,fields,field_to_cols,style)
 
