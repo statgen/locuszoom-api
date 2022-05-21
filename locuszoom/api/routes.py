@@ -578,6 +578,10 @@ def single_results():
   except:
     raise FlaskException("Invalid limit parameter, must be integer",400)
 
+  qfilter = request.args.get("filter")
+  if qfilter is None:
+    raise FlaskException("Must provide filter with this query",400)
+
   return std_response(db_table,db_cols,field_to_col,limit=limit)
 
 @bp.route(
