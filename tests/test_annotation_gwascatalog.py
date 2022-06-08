@@ -59,6 +59,9 @@ def test_recommended_gwascat_results(client):
   for k in "id variant rsid chrom pos ref alt trait trait_group risk_allele risk_frq log_pvalue or_beta genes pmid pubdate first_author study".split():
     assert k in result_data["data"]
 
+  unique_ids = set(result_data["data"]["id"])
+  assert len(unique_ids) == 1 # should only have 1 id come back when asking for best recommended catalog
+
 def test_annotation_gwascatalog_colons_decompose_noobj(client):
   test_id = 2
   params = {

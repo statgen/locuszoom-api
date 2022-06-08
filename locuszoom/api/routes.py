@@ -39,7 +39,7 @@ def invalid_request_check():
       if w in filter_str:
         raise FlaskException(f"Invalid string {w} found in filter string", 400)
 
-def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None):
+def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return_format=None, limit=None, filter_str=None):
   """
   Standard API response for simple cases of executing a filter against a single
   database table.
@@ -67,6 +67,7 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
 
       This parameter overrides the "format" query parameter, if specified. Leave as None to use the
       format parameter in the request.
+    filter_str: Pass in a filter string if the one received with the request should be overridden
 
   Returns:
     Flask response w/ JSON payload containing the results of the query
@@ -82,7 +83,9 @@ def std_response(db_table, db_cols, field_to_cols=None, return_json=True, return
   sql_compiler = SQLCompiler()
 
   # GET request parameters
-  filter_str = request.args.get("filter")
+  if filter_str is None:
+    filter_str = request.args.get("filter")
+
   fields_str = request.args.get("fields")
   sort_str = request.args.get("sort")
   format_str = request.args.get("format")
@@ -460,7 +463,7 @@ def gwascat_results():
         if allowed_build != build:
           raise FlaskException(f"Invalid build {build} given for GWAS catalog ID {dbid}")
 
-  json = std_response(db_table,db_cols,return_json=False)
+  json = std_response(db_table,db_cols,return_json=False,filter_str=filter_str)
 
   if 'decompose' in request.args:
     if isinstance(json, list):
