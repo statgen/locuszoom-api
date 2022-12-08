@@ -11,7 +11,8 @@ DATABASE = dict(
   host = "localhost",
   port = "5432",
   username = "postgres",
-  database = "travis"
+  database = "travis",
+  password = "postgres"
 )
 
 # Redis settings
