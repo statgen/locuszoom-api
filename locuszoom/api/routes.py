@@ -2,7 +2,7 @@
 from io import StringIO as IO
 from collections import OrderedDict
 from sqlalchemy import text
-from flask import g, jsonify, request, Blueprint, current_app
+from flask import g, jsonify, request, Blueprint, current_app, Response
 from locuszoom.api import sentry
 from locuszoom.api.jsonutil import JSONFloat
 from locuszoom.api.uriparsing import SQLCompiler, LDAPITranslator, FilterParser
@@ -1177,3 +1177,87 @@ def omnisearch():
             results.append(x)
 
     return jsonify({"build": build, "data": results})
+
+@bp.route('/lzorg/gwas/<gwas>/', methods=['GET'])
+def lzorg_gwas(gwas):
+    # Construct target URL
+    target_url = f"https://my.locuszoom.org/api/v1/gwas/{gwas}/"
+
+    # Forward the request headers (optional: you may want to filter some)
+    headers = {key: value for key, value in request.headers if key != 'Host'}
+
+    # Get query parameters
+    params = request.args
+
+    try:
+        # Forward the request to the target API with the same method
+        resp = requests.request(
+            method=request.method,
+            url=target_url,
+            headers=headers,
+            params=params,
+            data=request.get_data(),
+            cookies=request.cookies,
+            allow_redirects=False,
+        )
+
+        # Create a Flask response object
+        response = Response(
+            resp.content,
+            status=resp.status_code,
+        )
+
+        # Forward response headers from the target API
+        for key, value in resp.headers.items():
+            if key.lower() not in ('content-encoding', 'content-length', 'transfer-encoding', 'connection'):
+                response.headers[key] = value
+
+        # Add CORS headers to allow cross-origin requests
+        response.headers['Access-Control-Allow-Origin'] = '*'
+
+        return response
+
+    except requests.RequestException as e:
+        return {"error": str(e)}, 500
+
+@bp.route('/lzorg/gwas/<gwas>/data/', methods=['GET'])
+def lzorg_gwas_data(gwas):
+    # Construct target URL
+    target_url = f"https://my.locuszoom.org/api/v1/gwas/{gwas}/data/"
+
+    # Forward the request headers (optional: you may want to filter some)
+    headers = {key: value for key, value in request.headers if key != 'Host'}
+
+    # Get query parameters
+    params = request.args
+
+    try:
+        # Forward the request to the target API with the same method
+        resp = requests.request(
+            method=request.method,
+            url=target_url,
+            headers=headers,
+            params=params,
+            data=request.get_data(),
+            cookies=request.cookies,
+            allow_redirects=False,
+        )
+
+        # Create a Flask response object
+        response = Response(
+            resp.content,
+            status=resp.status_code,
+        )
+
+        # Forward response headers from the target API
+        for key, value in resp.headers.items():
+            if key.lower() not in ('content-encoding', 'content-length', 'transfer-encoding', 'connection'):
+                response.headers[key] = value
+
+        # Add CORS headers to allow cross-origin requests
+        response.headers['Access-Control-Allow-Origin'] = '*'
+
+        return response
+
+    except requests.RequestException as e:
+        return {"error": str(e)}, 500
