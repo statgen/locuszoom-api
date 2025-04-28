@@ -1,5 +1,6 @@
 .env
 etc
 bin/backup.py
+dump
 docker-compose.*.yml
 **/*.pyc
